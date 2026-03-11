@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-primary: #1A1A1A; /* 浓墨 */
+  --color-accent: #8B1A1A; /* 朱砂红 */
+  --color-gold: #B8860B; /* 暗金 */
+  --color-jade: #4A5D23; /* 墨绿 */
+  --color-bg-light: #FFFFFF;
+  --color-bg-dark: #EAE5D9; /* 宣纸深 */
+  --color-bg-panel: #F5F5F0; /* 宣纸浅 */
+  --color-ink: #1A1A1A;
+  --color-ink-light: #5C5C5C;
+}
+
+@layer utilities {
+  .altar-gradient {
+    background: radial-gradient(circle at center, rgba(234, 229, 217, 1) 0%, rgba(245, 245, 240, 1) 100%);
+  }
+  .gold-glow {
+    text-shadow: 0 0 10px rgba(184, 134, 11, 0.4);
+  }
+  .scroll-glow {
+    box-shadow: 0 0 30px rgba(26, 26, 26, 0.1);
+  }
+  .perspective-grid {
+    perspective: 1000px;
+  }
+  .grid-3d {
+    transform: rotateX(45deg) rotateZ(-10deg);
+    transform-style: preserve-3d;
+  }
+  .ink-splash {
+    background: radial-gradient(circle, rgba(139,26,26,0.1) 0%, rgba(139,26,26,0) 70%);
+  }
+}
+
+body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-ink);
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 4px rgba(139, 26, 26, 0.5);
+  cursor: pointer;
+  margin-top: -5px;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 2px;
+}

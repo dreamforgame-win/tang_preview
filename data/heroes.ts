@@ -1,0 +1,403 @@
+export type HeroQuality = '神将' | '名将' | '良将' | '裨将';
+export type HeroType = '步兵' | '骑兵' | '弓兵' | '盾兵' | '枪兵';
+export type HeroRole = '统帅' | '谋士' | '突击' | '辅助' | '先锋' | '勇武' | '奇谋' | '陷阵';
+
+export interface HeroDetail {
+  id: string;
+  name: string;
+  quality: HeroQuality;
+  type: HeroType;
+  role: HeroRole;
+  hp: number;
+  attack: number;
+  magic: number;
+  defense: number;
+  speed: number;
+  passive: {
+    name: string;
+    description: string;
+  };
+  active: {
+    name: string;
+    description: string;
+  };
+  avatar: string;
+}
+
+export const HERO_GALLERY: HeroDetail[] = [
+  {
+    id: 'lishimin',
+    name: '李世民',
+    quality: '名将',
+    type: '弓兵',
+    role: '辅助',
+    hp: 2200,
+    attack: 140,
+    magic: 220,
+    defense: 140,
+    speed: 125,
+    passive: { name: '天可汗', description: '友军每次释放主动技能，李世民恢复10点能量。' },
+    active: { name: '天策神威', description: '为全体友军提升30%攻速和攻击力，持续5秒。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lishimin'
+  },
+  {
+    id: 'lijing',
+    name: '李靖',
+    quality: '名将',
+    type: '骑兵',
+    role: '统帅',
+    hp: 2400,
+    attack: 180,
+    magic: 230,
+    defense: 180,
+    speed: 115,
+    passive: { name: '军神', description: '战斗开始时，全体友军获得最大生命值20%的护盾。' },
+    active: { name: '六军辟易', description: '召唤铁骑冲锋，对敌方大范围造成200%谋略与武力的混合伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lijing'
+  },
+  {
+    id: 'xuerengui',
+    name: '薛仁贵',
+    quality: '名将',
+    type: '弓兵',
+    role: '勇武',
+    hp: 2000,
+    attack: 250,
+    magic: 90,
+    defense: 120,
+    speed: 120,
+    passive: { name: '神力', description: '普攻有30%概率造成穿透伤害，命中目标后方直线的敌人。' },
+    active: { name: '三箭定天山', description: '连续射出三支爆裂箭，每箭造成250%武力伤害，若击杀则回满能量。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=xuerengui'
+  },
+  {
+    id: 'guoziyi',
+    name: '郭子仪',
+    quality: '名将',
+    type: '盾兵',
+    role: '统帅',
+    hp: 2800,
+    attack: 160,
+    magic: 190,
+    defense: 220,
+    speed: 100,
+    passive: { name: '中兴', description: '自身血量低于50%时，受到的所有伤害降低40%。' },
+    active: { name: '定国安邦', description: '嘲讽周围敌人，并将自身受到的伤害平摊给范围内所有敌人，持续4秒。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=guoziyi'
+  },
+  {
+    id: 'sudingfang',
+    name: '苏定方',
+    quality: '名将',
+    type: '骑兵',
+    role: '突击',
+    hp: 1800,
+    attack: 240,
+    magic: 110,
+    defense: 100,
+    speed: 130,
+    passive: { name: '长奔', description: '距离目标越远，普攻造成的伤害越高（最高提升50%）。' },
+    active: { name: '千里破阵', description: '瞬移至敌方谋略最高的单位身后，造成300%武力伤害并眩晕2秒。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sudingfang'
+  },
+  {
+    id: 'wuzetian',
+    name: '武则天',
+    quality: '名将',
+    type: '弓兵',
+    role: '奇谋',
+    hp: 1600,
+    attack: 80,
+    magic: 250,
+    defense: 120,
+    speed: 105,
+    passive: { name: '女帝', description: '在场时，敌方全体回能效率降低20%。' },
+    active: { name: '日月当空', description: '吸取全场敌人15点能量，并造成200%谋略的真实伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=wuzetian'
+  },
+  {
+    id: 'yuntiangang',
+    name: '袁天罡',
+    quality: '名将',
+    type: '弓兵',
+    role: '奇谋',
+    hp: 1500,
+    attack: 60,
+    magic: 250,
+    defense: 100,
+    speed: 110,
+    passive: { name: '天机', description: '普攻变为法术伤害（受谋略加成），且无视目标30%防御。' },
+    active: { name: '紫气推背', description: '召唤阵法覆盖战场，持续造成高额谋略伤害并附加禁疗效果。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=yuntiangang'
+  },
+  {
+    id: 'libai',
+    name: '李白',
+    quality: '名将',
+    type: '骑兵',
+    role: '突击',
+    hp: 1400,
+    attack: 245,
+    magic: 150,
+    defense: 80,
+    speed: 130,
+    passive: { name: '诗仙', description: '每次击杀敌人，永久提升10%武力和10%攻速。' },
+    active: { name: '青莲剑歌', description: '化为剑影无敌穿梭，随机攻击场上敌人5次，每次造成150%武力伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=libai'
+  },
+  {
+    id: 'chengyaojin',
+    name: '程咬金',
+    quality: '名将',
+    type: '盾兵',
+    role: '陷阵',
+    hp: 3200,
+    attack: 150,
+    magic: 50,
+    defense: 240,
+    speed: 85,
+    passive: { name: '福将', description: '受到致命伤害时保留1点血不死，并在接下来的3秒内持续回血。' },
+    active: { name: '半路杀出', description: '挥舞巨斧劈砍前方扇形区域，造成基于自身最大生命值15%的物理伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=chengyaojin'
+  },
+  {
+    id: 'yuchigong',
+    name: '尉迟恭',
+    quality: '名将',
+    type: '盾兵',
+    role: '陷阵',
+    hp: 3000,
+    attack: 170,
+    magic: 60,
+    defense: 230,
+    speed: 95,
+    passive: { name: '黑煞', description: '普攻有20%概率使目标眩晕1秒。' },
+    active: { name: '夺槊', description: '缴械目标使其3秒内无法普攻，并造成200%武力伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=yuchigong'
+  },
+  {
+    id: 'qinqiong',
+    name: '秦琼',
+    quality: '名将',
+    type: '枪兵',
+    role: '勇武',
+    hp: 2600,
+    attack: 230,
+    magic: 80,
+    defense: 180,
+    speed: 110,
+    passive: { name: '门神', description: '战斗开始时，链接距离最近的一名友军，为其分担30%伤害。' },
+    active: { name: '撒手锏', description: '掷出双锏，无视目标护盾直接扣除目标25%当前生命值（Boss减半）。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=qinqiong'
+  },
+  {
+    id: 'houjunji',
+    name: '侯君集',
+    quality: '名将',
+    type: '枪兵',
+    role: '勇武',
+    hp: 2400,
+    attack: 220,
+    magic: 120,
+    defense: 160,
+    speed: 115,
+    passive: { name: '破城', description: '攻击带有护盾的目标时，伤害额外提升50%。' },
+    active: { name: '先锋怒吼', description: '摧毁周围所有敌人的护盾，并造成大范围物理伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=houjunji'
+  },
+  {
+    id: 'luocheng',
+    name: '罗成',
+    quality: '良将',
+    type: '骑兵',
+    role: '突击',
+    hp: 1600,
+    attack: 180,
+    magic: 80,
+    defense: 90,
+    speed: 115,
+    passive: { name: '冷面', description: '暴击率额外提升20%。' },
+    active: { name: '回马枪', description: '对当前目标造成220%武力伤害，若目标血量低于30%则直接斩杀。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=luocheng'
+  },
+  {
+    id: 'shanxiongxin',
+    name: '单雄信',
+    quality: '良将',
+    type: '枪兵',
+    role: '勇武',
+    hp: 1900,
+    attack: 175,
+    magic: 60,
+    defense: 130,
+    speed: 105,
+    passive: { name: '绿林', description: '周围每有一个敌军，自身武力提升5%。' },
+    active: { name: '裂地击', description: '猛击地面，对周围一圈敌人造成150%武力伤害并减速。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=shanxiongxin'
+  },
+  {
+    id: 'direnjie',
+    name: '狄仁杰',
+    quality: '良将',
+    type: '弓兵',
+    role: '辅助',
+    hp: 1600,
+    attack: 70,
+    magic: 180,
+    defense: 110,
+    speed: 100,
+    passive: { name: '明察', description: '普攻给目标施加“破绽”，使其受到的伤害增加10%。' },
+    active: { name: '法网恢恢', description: '禁锢敌方武力最高的两名武将2秒，并降低其攻速。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=direnjie'
+  },
+  {
+    id: 'lichunfeng',
+    name: '李淳风',
+    quality: '良将',
+    type: '弓兵',
+    role: '奇谋',
+    hp: 1500,
+    attack: 60,
+    magic: 175,
+    defense: 90,
+    speed: 105,
+    passive: { name: '观星', description: '每隔5秒，随机为一名友军驱散负面状态。' },
+    active: { name: '星象陨落', description: '召唤三颗陨石随机砸向敌人，造成法术伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lichunfeng'
+  },
+  {
+    id: 'peimin',
+    name: '裴旻',
+    quality: '良将',
+    type: '枪兵',
+    role: '勇武',
+    hp: 1500,
+    attack: 180,
+    magic: 90,
+    defense: 80,
+    speed: 118,
+    passive: { name: '剑舞', description: '连续攻击同一个目标时，每次攻速递增5%（最高叠5层）。' },
+    active: { name: '瞬影斩', description: '对前方直线造成极速的五段连击，每段造成50%武力伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=peimin'
+  },
+  {
+    id: 'chaishao',
+    name: '柴绍',
+    quality: '良将',
+    type: '骑兵',
+    role: '辅助',
+    hp: 1800,
+    attack: 130,
+    magic: 140,
+    defense: 120,
+    speed: 105,
+    passive: { name: '驸马', description: '与女性武将同场时，自身及女性武将最大生命值提升15%。' },
+    active: { name: '军阵鼓舞', description: '为友军血量最低的两人恢复大量生命值。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=chaishao'
+  },
+  {
+    id: 'liji',
+    name: '李勣',
+    quality: '良将',
+    type: '枪兵',
+    role: '奇谋',
+    hp: 1700,
+    attack: 110,
+    magic: 170,
+    defense: 130,
+    speed: 100,
+    passive: { name: '奇谋', description: '释放技能后，下一次普攻附带高额真实伤害。' },
+    active: { name: '算无遗策', description: '使敌方攻击力最高的目标混乱，攻击其自己的队友持续3秒。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=liji'
+  },
+  {
+    id: 'wangbo',
+    name: '王勃',
+    quality: '良将',
+    type: '弓兵',
+    role: '辅助',
+    hp: 1400,
+    attack: 50,
+    magic: 160,
+    defense: 80,
+    speed: 110,
+    passive: { name: '才气', description: '开局为全体友军增加15点初始能量。' },
+    active: { name: '落霞孤鹜', description: '提升周围友军20%技能伤害，持续5秒。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=wangbo'
+  },
+  {
+    id: 'duanzhixuan',
+    name: '段志玄',
+    quality: '裨将',
+    type: '盾兵',
+    role: '陷阵',
+    hp: 1500,
+    attack: 100,
+    magic: 50,
+    defense: 120,
+    speed: 85,
+    passive: { name: '坚壁', description: '处于静止状态时，防御力提升20%。' },
+    active: { name: '盾墙', description: '获得一个持续4秒的护盾，吸收伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=duanzhixuan'
+  },
+  {
+    id: 'liuhongji',
+    name: '刘弘基',
+    quality: '裨将',
+    type: '枪兵',
+    role: '勇武',
+    hp: 1400,
+    attack: 115,
+    magic: 60,
+    defense: 90,
+    speed: 95,
+    passive: { name: '好战', description: '击杀敌人后，恢复自身10%的生命值。' },
+    active: { name: '奋力一击', description: '对单体造成150%武力伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=liuhongji'
+  },
+  {
+    id: 'yinkaishan',
+    name: '殷开山',
+    quality: '裨将',
+    type: '骑兵',
+    role: '突击',
+    hp: 1200,
+    attack: 120,
+    magic: 70,
+    defense: 70,
+    speed: 100,
+    passive: { name: '冲锋', description: '战斗开始的首次普攻必定暴击。' },
+    active: { name: '奔袭', description: '冲向最远的敌人，造成物理伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=yinkaishan'
+  },
+  {
+    id: 'zhanggongjin',
+    name: '张公谨',
+    quality: '裨将',
+    type: '弓兵',
+    role: '辅助',
+    hp: 1100,
+    attack: 80,
+    magic: 110,
+    defense: 80,
+    speed: 90,
+    passive: { name: '占卜', description: '自身死亡时，为周围友军恢复少量生命值。' },
+    active: { name: '吉凶', description: '随机使一名敌军减速30%，持续3秒。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhanggongjin'
+  },
+  {
+    id: 'qiuxinggong',
+    name: '丘行恭',
+    quality: '裨将',
+    type: '骑兵',
+    role: '勇武',
+    hp: 1300,
+    attack: 110,
+    magic: 40,
+    defense: 80,
+    speed: 95,
+    passive: { name: '拔箭', description: '受到远程攻击时，有一定概率格挡伤害。' },
+    active: { name: '怒斩', description: '挥刀对前方造成一次顺劈伤害。' },
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=qiuxinggong'
+  }
+];
