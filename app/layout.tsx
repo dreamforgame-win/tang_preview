@@ -1,7 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css'; // Global styles
 import { GameStateProvider } from '@/components/GameStateProvider';
-import BottomNav from '@/components/BottomNav';
 
 export const metadata: Metadata = {
   title: 'My Google AI Studio App',
@@ -15,7 +14,6 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <GameStateProvider>
           <div className="w-full max-w-md bg-bg-dark relative flex flex-col h-full overflow-hidden shadow-2xl border-x border-white/10">
             {children}
-            <BottomNav />
           </div>
         </GameStateProvider>
       </body>

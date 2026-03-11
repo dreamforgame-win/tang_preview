@@ -37,12 +37,14 @@ export default function HeroGallery() {
             onClick={() => setSelectedHero(hero)}
             className="flex flex-col items-center cursor-pointer group"
           >
-            <div className={`w-16 h-16 rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform`}
+            <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
                  style={{ backgroundImage: `url(${hero.avatar})` }}>
-            </div>
-            <div className="mt-1.5 flex items-center justify-center gap-1 w-full px-1">
-              <span className="text-[9px] font-bold px-1 rounded-sm bg-ink/10 text-ink-light whitespace-nowrap">{hero.type[0]}</span>
-              <span className="text-xs font-serif font-bold text-ink truncate">{hero.name}</span>
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                <div className="flex items-center justify-center gap-1 w-full">
+                  <span className="text-[9px] font-bold px-1 rounded-sm bg-ink/80 text-white whitespace-nowrap">{hero.type[0]}</span>
+                  <span className="text-xs font-serif font-bold text-white truncate drop-shadow-md">{hero.name}</span>
+                </div>
+              </div>
             </div>
           </div>
         ))}
