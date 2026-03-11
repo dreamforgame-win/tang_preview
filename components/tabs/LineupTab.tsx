@@ -1,6 +1,6 @@
 'use client';
 import { useGameState } from '@/components/GameStateProvider';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Filter, X, ChevronUp, Shield, Sword, Zap, Heart, Wind } from 'lucide-react';
 import { HERO_GALLERY, HeroQuality, HeroType, HeroRole, HeroDetail } from '@/data/heroes';
 
@@ -93,6 +93,111 @@ export default function LineupTab() {
 
   // Hero Info Modal state
   const [selectedHeroInfo, setSelectedHeroInfo] = useState<HeroDetail | null>(null);
+
+  // Touch Drag state
+  const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const draggedRef = useRef(false);
+  const [touchDragState, setTouchDragState] = useState<{
+    heroId: string;
+    sourceIndex?: number;
+    x: number;
+    y: number;
+    heroData: HeroDetail;
+  } | null>(null);
+
+  useEffect(() => {
+    if (touchDragState) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [touchDragState]);
+
+  const handleTouchStart = (e: React.TouchEvent, heroId: string, sourceIndex?: number) => {
+    draggedRef.current = false;
+    const touch = e.touches[0];
+    const heroData = HERO_GALLERY.find(h => h.id === heroId);
+    if (!heroData) return;
+    
+    const timer = setTimeout(() => {
+      draggedRef.current = true;
+      setTouchDragState({
+        heroId,
+        sourceIndex,
+        x: touch.clientX,
+        y: touch.clientY,
+        heroData
+      });
+      setIsDragging(true);
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 250);
+    setPressTimer(timer);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchDragState) {
+      const touch = e.touches[0];
+      setTouchDragState(prev => prev ? { ...prev, x: touch.clientX, y: touch.clientY } : null);
+      
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cell = elem?.closest('[data-cell-index]');
+      if (cell) {
+        setHoveredCell(parseInt(cell.getAttribute('data-cell-index')!));
+      } else {
+        setHoveredCell(null);
+      }
+    } else if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+    
+    if (!touchDragState) return;
+    
+    const touch = e.changedTouches[0];
+    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cell = elem?.closest('[data-cell-index]');
+    
+    if (cell) {
+      const targetIndex = parseInt(cell.getAttribute('data-cell-index')!);
+      handleDrop(targetIndex, touchDragState.heroId, touchDragState.sourceIndex);
+    } else {
+      const removeZone = elem?.closest('[data-drop-zone="remove"]');
+      if (removeZone && touchDragState.sourceIndex !== undefined) {
+        const newLineup = [...lineup];
+        newLineup[touchDragState.sourceIndex] = null;
+        setFullLineup(newLineup);
+      }
+    }
+    
+    setTouchDragState(null);
+    setHoveredCell(null);
+    setIsDragging(false);
+    
+    setTimeout(() => {
+      draggedRef.current = false;
+    }, 100);
+  };
+
+  const handleTouchCancel = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+    setTouchDragState(null);
+    setHoveredCell(null);
+    setIsDragging(false);
+    draggedRef.current = false;
+  };
 
   // Calculate troops based on current lineup
   const currentLineupHeroes = lineup.map(id => id ? heroes.find(h => h.id === id) : null).filter(Boolean) as Hero[];
@@ -187,7 +292,12 @@ export default function LineupTab() {
   const lineupNames = ['一', '二', '三', '四', '五'];
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden bg-bg-panel">
+    <div 
+      className="flex-1 flex flex-col relative overflow-hidden bg-bg-panel"
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+    >
       {/* Header */}
       <header className="flex items-center justify-center bg-bg-panel border-b border-ink/10 p-4 sticky top-0 z-50 shrink-0">
         <h2 className="font-serif text-lg font-bold leading-tight uppercase tracking-widest text-ink">编队</h2>
@@ -206,6 +316,7 @@ export default function LineupTab() {
                 return (
                   <div 
                     key={index}
+                    data-cell-index={index}
                     onDragOver={(e) => { e.preventDefault(); setHoveredCell(index); }}
                     onDragLeave={() => setHoveredCell(null)}
                     onDrop={(e) => {
@@ -229,8 +340,9 @@ export default function LineupTab() {
                           setTimeout(() => setIsDragging(true), 0);
                         }}
                         onDragEnd={() => setIsDragging(false)}
-                        style={{ transform: 'rotateX(-60deg) translateY(-20px)', transformOrigin: 'bottom center' }}
-                        className={`absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing transition-opacity w-24 z-20 ${isDragging ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+                        onTouchStart={(e) => handleTouchStart(e, heroData.id, index)}
+                        style={{ transform: 'rotateX(-60deg) translateY(-20px)', transformOrigin: 'bottom center', WebkitTouchCallout: 'none' }}
+                        className={`absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing transition-opacity w-24 z-20 select-none ${isDragging ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
                       >
                         <div className="flex items-center justify-center gap-1 mb-1 bg-black/60 px-1.5 py-0.5 rounded-sm whitespace-nowrap">
                           <span className={`text-[8px] font-bold ${getTypeColor(heroData.type).split(' ')[0]}`}>{heroData.type[0]}</span>
@@ -310,6 +422,7 @@ export default function LineupTab() {
           {activeTab === 'heroes' && (
             <section 
               className="p-4 flex flex-col h-full"
+              data-drop-zone="remove"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
@@ -338,8 +451,16 @@ export default function LineupTab() {
                         setTimeout(() => setIsDragging(true), 0);
                       }}
                       onDragEnd={() => setIsDragging(false)}
-                      className="flex flex-col items-center cursor-pointer group shrink-0 relative"
-                      onClick={() => setSelectedHeroInfo(hero)}
+                      onTouchStart={(e) => handleTouchStart(e, hero.id)}
+                      className="flex flex-col items-center cursor-pointer group shrink-0 relative select-none"
+                      style={{ WebkitTouchCallout: 'none' }}
+                      onClick={(e) => {
+                        if (draggedRef.current) {
+                          e.preventDefault();
+                          return;
+                        }
+                        setSelectedHeroInfo(hero);
+                      }}
                     >
                       <div className={`w-[70px] h-[110px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
                            style={{ backgroundImage: `url(${hero.avatar})` }}>
@@ -594,6 +715,27 @@ export default function LineupTab() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Touch Drag Ghost Element */}
+      {touchDragState && (
+        <div 
+          className="fixed z-[9999] pointer-events-none flex flex-col items-center"
+          style={{ 
+            left: touchDragState.x, 
+            top: touchDragState.y,
+            transform: 'translate(-50%, -120%)'
+          }}
+        >
+          <div className="flex items-center justify-center gap-1 mb-1 bg-black/60 px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+            <span className={`text-[8px] font-bold ${getTypeColor(touchDragState.heroData.type).split(' ')[0]}`}>{touchDragState.heroData.type[0]}</span>
+            <span className="text-[10px] font-serif font-bold text-white">{touchDragState.heroData.name}</span>
+          </div>
+          <div 
+            className={`w-16 h-16 rounded-full border-2 ${getQualityColor(touchDragState.heroData.quality).split(' ')[1]} bg-bg-dark bg-cover bg-center shadow-lg`}
+            style={{ backgroundImage: `url(${touchDragState.heroData.avatar})` }}
+          ></div>
         </div>
       )}
     </div>
