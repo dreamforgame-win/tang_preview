@@ -14,10 +14,12 @@ type Hero = {
 
 const HeroRow = ({ hero, updateHeroTroops }: { hero: Hero, updateHeroTroops: (id: string, troops: number) => void }) => {
   const [localTroops, setLocalTroops] = useState(hero.troops);
+  const [prevTroops, setPrevTroops] = useState(hero.troops);
 
-  useEffect(() => {
+  if (hero.troops !== prevTroops) {
+    setPrevTroops(hero.troops);
     setLocalTroops(hero.troops);
-  }, [hero.troops]);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalTroops(parseInt(e.target.value));
@@ -28,7 +30,7 @@ const HeroRow = ({ hero, updateHeroTroops }: { hero: Hero, updateHeroTroops: (id
   };
 
   return (
-    <div className="flex items-center gap-3 bg-white/60 px-3 h-[45px] rounded-sm border border-ink/10 shadow-sm">
+    <div className="flex items-center gap-3 bg-primary/60 px-3 h-[45px] rounded-sm border border-white/10 shadow-sm">
       <div 
         className="w-8 h-8 rounded-sm border border-ink/20 overflow-hidden bg-bg-dark shrink-0 bg-cover bg-center" 
         style={{ backgroundImage: `url(${hero.avatar})` }}
@@ -64,7 +66,7 @@ const HeroRow = ({ hero, updateHeroTroops }: { hero: Hero, updateHeroTroops: (id
 };
 
 const EmptyRow = () => (
-  <div className="flex items-center gap-3 bg-white/40 px-3 h-[45px] rounded-sm border border-ink/5 border-dashed shadow-sm opacity-60">
+  <div className="flex items-center gap-3 bg-primary/40 px-3 h-[45px] rounded-sm border border-white/5 border-dashed shadow-sm opacity-60">
     <div className="w-8 h-8 rounded-sm border border-ink/10 border-dashed bg-ink/5 shrink-0 flex items-center justify-center">
       <span className="text-ink/30 text-xs font-bold">?</span>
     </div>
@@ -94,9 +96,16 @@ export default function LineupTab() {
   // Hero Info Modal state
   const [selectedHeroInfo, setSelectedHeroInfo] = useState<HeroDetail | null>(null);
 
+  // View Angle state
+  const [viewAngle, setViewAngle] = useState(45);
+
+  // Image Loading state
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+
   // Touch Drag state
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
   const draggedRef = useRef(false);
+  const touchStartPosRef = useRef<{x: number, y: number} | null>(null);
   const [touchDragState, setTouchDragState] = useState<{
     heroId: string;
     sourceIndex?: number;
@@ -117,6 +126,7 @@ export default function LineupTab() {
   const handleTouchStart = (e: React.TouchEvent, heroId: string, sourceIndex?: number) => {
     draggedRef.current = false;
     const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
     const heroData = HERO_GALLERY.find(h => h.id === heroId);
     if (!heroData) return;
     
@@ -133,7 +143,7 @@ export default function LineupTab() {
       if (window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(50);
       }
-    }, 250);
+    }, 200);
     setPressTimer(timer);
   };
 
@@ -149,9 +159,14 @@ export default function LineupTab() {
       } else {
         setHoveredCell(null);
       }
-    } else if (pressTimer) {
-      clearTimeout(pressTimer);
-      setPressTimer(null);
+    } else if (pressTimer && touchStartPosRef.current) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartPosRef.current.x;
+      const dy = touch.clientY - touchStartPosRef.current.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 10) {
+        clearTimeout(pressTimer);
+        setPressTimer(null);
+      }
     }
   };
 
@@ -293,22 +308,23 @@ export default function LineupTab() {
 
   return (
     <div 
-      className="flex-1 flex flex-col relative overflow-hidden bg-bg-panel"
+      className="flex-1 flex flex-col relative overflow-hidden bg-bg-panel bg-[url('https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/team_bg.jpg')] bg-cover bg-center"
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
     >
+      <div className="absolute inset-0 bg-bg-dark/60 backdrop-blur-[2px] pointer-events-none z-0"></div>
       {/* Header */}
-      <header className="flex items-center justify-center bg-bg-panel border-b border-ink/10 p-4 sticky top-0 z-50 shrink-0">
+      <header className="flex items-center justify-center bg-bg-panel/80 backdrop-blur-md border-b border-ink/10 p-4 sticky top-0 z-50 shrink-0">
         <h2 className="font-serif text-lg font-bold leading-tight uppercase tracking-widest text-ink">编队</h2>
       </header>
 
       <div className="flex-1 overflow-y-auto flex flex-col pb-24">
         {/* 3D Grid Section */}
-        <section className="w-full h-80 shrink-0 flex items-center justify-center bg-gradient-to-b from-bg-dark to-bg-panel relative overflow-hidden border-b border-ink/5">
+        <section className="w-full h-80 shrink-0 flex items-center justify-center relative overflow-hidden border-b border-ink/5 z-10">
           <div style={{ perspective: '1000px' }} className="w-full h-full flex items-center justify-center">
             <div 
-              style={{ transform: 'rotateX(60deg) translateY(-10px)', transformStyle: 'preserve-3d' }} 
+              style={{ transform: `rotateX(${viewAngle}deg) translateY(-10px)`, transformStyle: 'preserve-3d' }} 
               className="grid grid-cols-3 gap-3"
             >
               {lineup.map((heroId, index) => {
@@ -329,7 +345,7 @@ export default function LineupTab() {
                       setIsDragging(false);
                     }}
                     style={{ transformStyle: 'preserve-3d' }}
-                    className={`w-[100px] h-[100px] border-[1.5px] transition-colors relative ${hoveredCell === index ? 'bg-accent/30 border-accent' : 'bg-ink/5 border-ink/40'}`}
+                    className={`w-[95px] h-[95px] border-[1.5px] transition-colors relative ${hoveredCell === index ? 'bg-accent/30 border-accent' : 'bg-ink/5 border-ink/40'}`}
                   >
                     {heroData && (
                       <div 
@@ -341,17 +357,30 @@ export default function LineupTab() {
                         }}
                         onDragEnd={() => setIsDragging(false)}
                         onTouchStart={(e) => handleTouchStart(e, heroData.id, index)}
-                        style={{ transform: 'rotateX(-60deg) translateY(-20px)', transformOrigin: 'bottom center', WebkitTouchCallout: 'none' }}
-                        className={`absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing transition-opacity w-24 z-20 select-none ${isDragging ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+                        style={{ transform: `rotateX(-${viewAngle}deg) translateY(-6px)`, transformOrigin: 'bottom center', WebkitTouchCallout: 'none' }}
+                        className={`absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center justify-end cursor-grab active:cursor-grabbing transition-opacity w-24 z-20 select-none ${isDragging ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
                       >
-                        <div className="flex items-center justify-center gap-1 mb-1 bg-black/60 px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+                        <div className="relative w-full flex justify-center items-end mb-1">
+                          <div className={`flex flex-col items-center transition-opacity duration-300 w-full ${viewAngle < 22.5 || !loadedImages[heroData.id] ? 'opacity-100' : 'opacity-0 absolute bottom-0 pointer-events-none'}`}>
+                            <div 
+                              className={`w-16 h-16 rounded-full border-2 ${getQualityColor(heroData.quality).split(' ')[1]} bg-bg-dark bg-cover bg-center shadow-lg`}
+                              style={{ backgroundImage: `url(${heroData.avatar})` }}
+                            ></div>
+                          </div>
+                          <div className={`flex flex-col items-center transition-opacity duration-300 w-full ${viewAngle >= 22.5 && loadedImages[heroData.id] ? 'opacity-100' : 'opacity-0 absolute bottom-0 pointer-events-none'}`}>
+                            <img 
+                              src={`https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/hero-chess/${heroData.id}.png`} 
+                              alt={heroData.name}
+                              className="w-20 h-auto object-contain drop-shadow-2xl"
+                              draggable={false}
+                              onLoad={() => setLoadedImages(prev => ({ ...prev, [heroData.id]: true }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center gap-1 bg-black/60 px-1.5 py-0.5 rounded-sm whitespace-nowrap z-10">
                           <span className={`text-[8px] font-bold ${getTypeColor(heroData.type).split(' ')[0]}`}>{heroData.type[0]}</span>
                           <span className="text-[10px] font-serif font-bold text-white">{heroData.name}</span>
                         </div>
-                        <div 
-                          className={`w-16 h-16 rounded-full border-2 ${getQualityColor(heroData.quality).split(' ')[1]} bg-bg-dark bg-cover bg-center shadow-lg`}
-                          style={{ backgroundImage: `url(${heroData.avatar})` }}
-                        ></div>
                       </div>
                     )}
                   </div>
@@ -361,8 +390,23 @@ export default function LineupTab() {
           </div>
         </section>
 
+        {/* View Angle Slider */}
+        <div className="relative z-30 px-6 py-3 bg-bg-panel border-b border-ink/5 flex items-center gap-4 text-xs text-ink-light font-bold shrink-0">
+          <span>默认视角</span>
+          <input
+            type="range"
+            min="0"
+            max="45"
+            step="0.5"
+            value={45 - viewAngle}
+            onChange={(e) => setViewAngle(45 - parseFloat(e.target.value))}
+            className="flex-1 h-2 bg-white rounded-lg appearance-none cursor-pointer border border-ink/10 shadow-inner [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md"
+          />
+          <span>完全俯视</span>
+        </div>
+
         {/* Tabs */}
-        <nav className="flex border-b border-ink/10 bg-bg-panel sticky top-0 z-40 shrink-0">
+        <nav className="flex border-b border-ink/10 bg-bg-panel/80 backdrop-blur-md sticky top-0 z-40 shrink-0">
           <button 
             onClick={() => setLocalActiveTab('troops')}
             className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${activeTab === 'troops' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
@@ -404,7 +448,7 @@ export default function LineupTab() {
               <div className="mt-[25px] flex gap-3 h-[45px]">
                 <button 
                   onClick={quickAssign}
-                  className="flex-1 bg-white/80 border border-ink/20 rounded-sm flex flex-col items-center justify-center active:bg-ink/5 transition-colors shadow-sm"
+                  className="flex-1 bg-primary/80 border border-white/10 rounded-sm flex flex-col items-center justify-center active:bg-white/5 transition-colors shadow-sm"
                 >
                   <span className="font-bold text-ink uppercase tracking-tighter text-sm leading-none mb-1">快速分配</span>
                   <span className="text-[10px] text-ink-light font-mono leading-none">{totalTroops.toLocaleString()} / {maxTotalTroops.toLocaleString()}</span>
@@ -466,14 +510,14 @@ export default function LineupTab() {
                            style={{ backgroundImage: `url(${hero.avatar})` }}>
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
                           <div className="flex items-center justify-center gap-1 w-full">
-                            <span className="text-[8px] font-bold px-1 rounded-sm bg-ink/80 text-white whitespace-nowrap">{hero.type[0]}</span>
+                            <span className="text-[8px] font-bold px-1 rounded-sm bg-black/60 text-white whitespace-nowrap">{hero.type[0]}</span>
                             <span className="text-[10px] font-serif font-bold text-white truncate drop-shadow-md">{hero.name}</span>
                           </div>
                         </div>
                         {isPlaced && (
                           <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1 z-10">
                             {heroLineups.map(lIdx => (
-                              <span key={lIdx} className="text-[10px] font-bold text-white bg-ink/80 px-2 py-0.5 rounded-sm border border-white/20 shadow-sm">
+                              <span key={lIdx} className="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-sm border border-white/20 shadow-sm">
                                 阵容{lineupNames[lIdx]}
                               </span>
                             ))}
@@ -494,7 +538,7 @@ export default function LineupTab() {
               <div className="mt-auto pt-4 flex justify-center border-t border-ink/10">
                 <button 
                   onClick={() => setIsFilterOpen(true)}
-                  className="relative flex items-center gap-2 bg-white/80 px-6 py-2 rounded-full border border-ink/20 shadow-sm active:bg-ink/5 transition-colors"
+                  className="relative flex items-center gap-2 bg-primary/80 px-6 py-2 rounded-full border border-white/10 shadow-sm active:bg-white/5 transition-colors"
                 >
                   <Filter size={16} className="text-ink" />
                   <span className="font-serif font-bold text-ink text-sm tracking-widest">筛选武将</span>
@@ -514,19 +558,19 @@ export default function LineupTab() {
         </div>
       </div>
 
-      {/* Floating Controls (Back & Lineup Switch) */}
-      <div className="absolute bottom-6 left-4 z-50 flex items-center gap-3">
+      {/* Fixed Bottom Bar */}
+      <div className="absolute bottom-0 left-0 w-full h-16 bg-bg-panel/95 backdrop-blur-md border-t border-white/10 flex items-center px-4 z-50 gap-3">
         <button 
           onClick={() => setActiveTab('battle')}
-          className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md border border-ink/20 flex items-center justify-center shadow-lg active:scale-95 transition-transform text-ink"
+          className="w-10 h-10 rounded-full bg-primary/80 border border-white/10 flex items-center justify-center shadow-sm active:scale-95 transition-transform text-ink"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
         </button>
 
         <div className="relative">
           <button 
             onClick={() => setIsLineupMenuOpen(!isLineupMenuOpen)}
-            className="h-12 px-5 rounded-full bg-white/90 backdrop-blur-md border border-ink/20 flex items-center justify-center gap-1 shadow-lg active:scale-95 transition-transform text-ink"
+            className="h-10 px-4 rounded-full bg-primary/80 border border-white/10 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform text-ink"
           >
             <span className="font-serif font-bold text-sm tracking-widest">阵容{lineupNames[currentLineupIndex]}</span>
             <ChevronUp size={16} className={`transition-transform duration-200 ${isLineupMenuOpen ? 'rotate-180' : ''}`} />
@@ -541,7 +585,7 @@ export default function LineupTab() {
                     setCurrentLineupIndex(idx);
                     setIsLineupMenuOpen(false);
                   }}
-                  className={`py-3 text-sm font-serif font-bold transition-colors border-b border-ink/5 last:border-0 ${currentLineupIndex === idx ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'}`}
+                  className={`py-3 text-sm font-serif font-bold transition-colors border-b border-ink/5 last:border-0 ${currentLineupIndex === idx ? 'bg-white/20 text-white' : 'text-ink hover:bg-ink/5'}`}
                 >
                   阵容{lineupNames[idx]}
                 </button>
@@ -553,9 +597,9 @@ export default function LineupTab() {
 
       {/* Filter Modal */}
       {isFilterOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-bg-dark/80 backdrop-blur-sm sm:items-center">
           <div className="w-full max-w-md bg-bg-panel rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-ink/10 bg-white/50">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-primary/50">
               <h3 className="font-serif font-bold text-lg text-ink tracking-widest">筛选</h3>
               <button onClick={() => setIsFilterOpen(false)} className="p-1 text-ink-light hover:text-ink transition-colors">
                 <X size={20} />
@@ -571,7 +615,7 @@ export default function LineupTab() {
                     <button 
                       key={q}
                       onClick={() => toggleFilter(q, selectedQualities, setSelectedQualities)}
-                      className={`px-4 py-1.5 rounded-sm text-xs font-bold border transition-colors ${selectedQualities.includes(q) ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-ink/20 hover:border-ink/50'}`}
+                      className={`px-4 py-1.5 rounded-sm text-xs font-bold border transition-colors ${selectedQualities.includes(q) ? 'bg-white/20 text-white border-white/20' : 'bg-white text-ink border-ink/20 hover:border-ink/50'}`}
                     >
                       {q}
                     </button>
@@ -587,7 +631,7 @@ export default function LineupTab() {
                     <button 
                       key={t}
                       onClick={() => toggleFilter(t, selectedTypes, setSelectedTypes)}
-                      className={`px-4 py-1.5 rounded-sm text-xs font-bold border transition-colors ${selectedTypes.includes(t) ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-ink/20 hover:border-ink/50'}`}
+                      className={`px-4 py-1.5 rounded-sm text-xs font-bold border transition-colors ${selectedTypes.includes(t) ? 'bg-white/20 text-white border-white/20' : 'bg-white text-ink border-ink/20 hover:border-ink/50'}`}
                     >
                       {t}
                     </button>
@@ -603,7 +647,7 @@ export default function LineupTab() {
                     <button 
                       key={r}
                       onClick={() => toggleFilter(r, selectedRoles, setSelectedRoles)}
-                      className={`px-4 py-1.5 rounded-sm text-xs font-bold border transition-colors ${selectedRoles.includes(r) ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-ink/20 hover:border-ink/50'}`}
+                      className={`px-4 py-1.5 rounded-sm text-xs font-bold border transition-colors ${selectedRoles.includes(r) ? 'bg-white/20 text-white border-white/20' : 'bg-white text-ink border-ink/20 hover:border-ink/50'}`}
                     >
                       {r}
                     </button>
@@ -612,20 +656,20 @@ export default function LineupTab() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-ink/10 bg-white/50 flex gap-3">
+            <div className="p-4 border-t border-white/10 bg-primary/50 flex gap-3">
               <button 
                 onClick={() => {
                   setSelectedQualities([]);
                   setSelectedTypes([]);
                   setSelectedRoles([]);
                 }}
-                className="flex-1 py-2.5 rounded-sm border border-ink/20 text-ink font-bold text-sm active:bg-ink/5 transition-colors"
+                className="flex-1 py-2.5 rounded-sm border border-white/20 text-ink font-bold text-sm active:bg-white/5 transition-colors"
               >
                 重置
               </button>
               <button 
                 onClick={() => setIsFilterOpen(false)}
-                className="flex-[2] py-2.5 rounded-sm bg-ink text-white font-bold text-sm active:bg-ink/90 transition-colors"
+                className="flex-[2] py-2.5 rounded-sm bg-white/20 text-white font-bold text-sm active:bg-white/30 transition-colors"
               >
                 确定
               </button>
@@ -639,23 +683,19 @@ export default function LineupTab() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-bg-dark/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-bg-panel border border-ink/20 rounded-sm shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="relative h-36 bg-ink flex items-end p-4">
+            <div className="relative h-64 bg-bg-dark flex items-end p-4">
               <div className="absolute top-2 right-2 p-1.5 bg-black/40 rounded-full cursor-pointer text-white/80 hover:text-white z-20 transition-colors" onClick={() => setSelectedHeroInfo(null)}>
                 <X size={18} />
               </div>
-              <div className="absolute inset-0 opacity-40 bg-cover bg-center" style={{ backgroundImage: `url(${selectedHeroInfo.avatar})` }}></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-transparent"></div>
+              <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${selectedHeroInfo.avatar})` }}></div>
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-bg-panel via-bg-panel/60 to-transparent"></div>
               
-              <div className="relative z-10 flex items-end gap-4 w-full">
-                <div className={`w-20 h-20 rounded-sm border-2 ${getQualityColor(selectedHeroInfo.quality).split(' ')[1]} bg-bg-dark bg-cover bg-center shadow-lg`}
-                     style={{ backgroundImage: `url(${selectedHeroInfo.avatar})` }}></div>
-                <div className="flex-1 pb-1">
-                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getQualityColor(selectedHeroInfo.quality)}`}>{selectedHeroInfo.quality}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getTypeColor(selectedHeroInfo.type)}`}>{selectedHeroInfo.type}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-white/20 text-white border border-white/30">{selectedHeroInfo.role}</span>
-                  </div>
-                  <h2 className="text-2xl font-serif font-bold text-white tracking-widest">{selectedHeroInfo.name}</h2>
+              <div className="relative z-10 flex items-end gap-3 w-full pb-2">
+                <h2 className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-md">{selectedHeroInfo.name}</h2>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getQualityColor(selectedHeroInfo.quality)}`}>{selectedHeroInfo.quality}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getTypeColor(selectedHeroInfo.type)}`}>{selectedHeroInfo.type}</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-bg-dark/60 text-white border border-white/30 backdrop-blur-sm">{selectedHeroInfo.role}</span>
                 </div>
               </div>
             </div>
@@ -663,29 +703,29 @@ export default function LineupTab() {
             {/* Modal Body */}
             <div className="p-5 overflow-y-auto flex-1 bg-bg-panel text-ink">
               {/* Stats */}
-              <div className="grid grid-cols-2 gap-y-3 gap-x-4 mb-6 p-4 bg-white/60 border border-ink/10 rounded-sm shadow-sm relative overflow-hidden">
+              <div className="flex justify-between items-center mb-6 p-4 bg-primary/60 border border-white/10 rounded-sm shadow-sm relative overflow-hidden">
                 <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
                   <Shield size={100} />
                 </div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-1.5 text-ink-light"><Heart size={14} /> <span className="text-xs font-bold">生命</span></div>
-                  <span className="font-mono font-bold text-ink">{selectedHeroInfo.hp}</span>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="flex items-center gap-1 text-ink-light"><Heart size={12} /> <span className="text-[10px] font-bold">生命</span></div>
+                  <span className="font-mono font-bold text-ink text-sm">{selectedHeroInfo.hp}</span>
                 </div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-1.5 text-ink-light"><Sword size={14} /> <span className="text-xs font-bold">攻击</span></div>
-                  <span className="font-mono font-bold text-ink">{selectedHeroInfo.attack}</span>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="flex items-center gap-1 text-ink-light"><Sword size={12} /> <span className="text-[10px] font-bold">攻击</span></div>
+                  <span className="font-mono font-bold text-ink text-sm">{selectedHeroInfo.attack}</span>
                 </div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-1.5 text-ink-light"><Zap size={14} /> <span className="text-xs font-bold">谋略</span></div>
-                  <span className="font-mono font-bold text-ink">{selectedHeroInfo.magic}</span>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="flex items-center gap-1 text-ink-light"><Zap size={12} /> <span className="text-[10px] font-bold">谋略</span></div>
+                  <span className="font-mono font-bold text-ink text-sm">{selectedHeroInfo.magic}</span>
                 </div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-1.5 text-ink-light"><Shield size={14} /> <span className="text-xs font-bold">防御</span></div>
-                  <span className="font-mono font-bold text-ink">{selectedHeroInfo.defense}</span>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="flex items-center gap-1 text-ink-light"><Shield size={12} /> <span className="text-[10px] font-bold">防御</span></div>
+                  <span className="font-mono font-bold text-ink text-sm">{selectedHeroInfo.defense}</span>
                 </div>
-                <div className="flex items-center justify-between col-span-2 relative z-10 pt-2 border-t border-ink/5 mt-1">
-                  <div className="flex items-center gap-1.5 text-ink-light"><Wind size={14} /> <span className="text-xs font-bold">攻速</span></div>
-                  <span className="font-mono font-bold text-ink">{selectedHeroInfo.speed}</span>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="flex items-center gap-1 text-ink-light"><Wind size={12} /> <span className="text-[10px] font-bold">攻速</span></div>
+                  <span className="font-mono font-bold text-ink text-sm">{selectedHeroInfo.speed}</span>
                 </div>
               </div>
 
@@ -693,16 +733,16 @@ export default function LineupTab() {
               <div className="space-y-5">
                 <div className="relative">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-ink text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold tracking-widest">被动</span>
+                    <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold tracking-widest">被动</span>
                     <h3 className="font-serif font-bold text-sm text-ink">{selectedHeroInfo.passive.name}</h3>
                   </div>
                   <p className="text-xs text-ink-light leading-relaxed pl-1">{selectedHeroInfo.passive.description}</p>
                 </div>
                 
                 <div className="w-full flex items-center justify-center opacity-20 py-1">
-                  <div className="h-px bg-ink flex-1"></div>
-                  <div className="w-1.5 h-1.5 rotate-45 bg-ink mx-2"></div>
-                  <div className="h-px bg-ink flex-1"></div>
+                  <div className="h-px bg-white/20 flex-1"></div>
+                  <div className="w-1.5 h-1.5 rotate-45 bg-white/20 mx-2"></div>
+                  <div className="h-px bg-white/20 flex-1"></div>
                 </div>
 
                 <div className="relative">
@@ -721,21 +761,34 @@ export default function LineupTab() {
       {/* Touch Drag Ghost Element */}
       {touchDragState && (
         <div 
-          className="fixed z-[9999] pointer-events-none flex flex-col items-center"
+          className="fixed z-[9999] pointer-events-none flex flex-col items-center justify-end"
           style={{ 
             left: touchDragState.x, 
             top: touchDragState.y,
             transform: 'translate(-50%, -120%)'
           }}
         >
-          <div className="flex items-center justify-center gap-1 mb-1 bg-black/60 px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+          <div className="relative w-full flex justify-center items-end mb-1">
+            <div className={`flex flex-col items-center transition-opacity duration-300 ${viewAngle < 22.5 || !loadedImages[touchDragState.heroData.id] ? 'opacity-100' : 'opacity-0 absolute bottom-0 pointer-events-none'}`}>
+              <div 
+                className={`w-16 h-16 rounded-full border-2 ${getQualityColor(touchDragState.heroData.quality).split(' ')[1]} bg-bg-dark bg-cover bg-center shadow-lg`}
+                style={{ backgroundImage: `url(${touchDragState.heroData.avatar})` }}
+              ></div>
+            </div>
+            <div className={`flex flex-col items-center transition-opacity duration-300 ${viewAngle >= 22.5 && loadedImages[touchDragState.heroData.id] ? 'opacity-100' : 'opacity-0 absolute bottom-0 pointer-events-none'}`}>
+              <img 
+                src={`https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/hero-chess/${touchDragState.heroData.id}.png`} 
+                alt={touchDragState.heroData.name}
+                className="w-20 h-auto object-contain drop-shadow-2xl"
+                draggable={false}
+                onLoad={() => setLoadedImages(prev => ({ ...prev, [touchDragState.heroData.id]: true }))}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-1 bg-black/60 px-1.5 py-0.5 rounded-sm whitespace-nowrap z-10">
             <span className={`text-[8px] font-bold ${getTypeColor(touchDragState.heroData.type).split(' ')[0]}`}>{touchDragState.heroData.type[0]}</span>
             <span className="text-[10px] font-serif font-bold text-white">{touchDragState.heroData.name}</span>
           </div>
-          <div 
-            className={`w-16 h-16 rounded-full border-2 ${getQualityColor(touchDragState.heroData.quality).split(' ')[1]} bg-bg-dark bg-cover bg-center shadow-lg`}
-            style={{ backgroundImage: `url(${touchDragState.heroData.avatar})` }}
-          ></div>
         </div>
       )}
     </div>

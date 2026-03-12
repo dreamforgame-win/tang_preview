@@ -20,29 +20,32 @@ export default function SummonTab() {
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-y-auto pb-24 altar-gradient">
-      {/* Header */}
-      <div className="sticky top-0 w-full z-20 flex justify-between items-center p-4 bg-gradient-to-b from-bg-dark to-transparent">
+    <div className="flex-1 flex flex-col relative overflow-hidden bg-[url('https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/summon_bg.jpg')] bg-cover bg-center">
+      <div className="absolute inset-0 bg-bg-dark/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
+      
+      <div className="flex-1 overflow-y-auto flex flex-col pb-24 relative z-10">
+        {/* Header */}
+        <div className="sticky top-0 w-full z-20 flex justify-between items-center p-4 bg-gradient-to-b from-bg-dark/80 to-transparent">
         <div className="flex items-center gap-2">
-          <h1 className="font-serif text-lg font-bold tracking-widest text-ink">秘境寻访</h1>
+          <h1 className="font-serif text-lg font-bold tracking-widest text-white drop-shadow-md">秘境寻访</h1>
         </div>
         <div className="flex gap-4">
-          <div className="flex items-center gap-1 bg-white/60 px-3 py-1 rounded-full border border-ink/10 shadow-sm">
+          <div className="flex items-center gap-1 bg-bg-dark/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 shadow-sm">
             <div className="w-4 h-4 rounded-full bg-gold flex items-center justify-center text-white text-[10px] font-bold">★</div>
-            <span className="text-xs font-bold text-ink">{coins.toLocaleString()}</span>
+            <span className="text-xs font-bold text-white">{coins.toLocaleString()}</span>
             <PlusCircle className="text-accent w-3 h-3 ml-1 cursor-pointer" />
           </div>
-          <div className="flex items-center gap-1 bg-white/60 px-3 py-1 rounded-full border border-ink/10 shadow-sm">
+          <div className="flex items-center gap-1 bg-bg-dark/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 shadow-sm">
             <Hexagon className="text-jade w-4 h-4 fill-jade/20" />
-            <span className="text-xs font-bold text-ink">{tokens}</span>
+            <span className="text-xs font-bold text-white">{tokens}</span>
           </div>
         </div>
       </div>
 
       {/* Background Elements (Ink Splashes) */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-ink blur-[80px] rounded-full opacity-30"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-ink blur-[100px] rounded-full opacity-20"></div>
+      <div className="absolute inset-0 z-0 opacity-40 pointer-events-none mix-blend-overlay">
+        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-accent blur-[80px] rounded-full opacity-30"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-accent blur-[100px] rounded-full opacity-20"></div>
         <div className="absolute top-10 right-10 w-32 h-32 bg-accent blur-[60px] rounded-full opacity-10"></div>
       </div>
 
@@ -55,14 +58,6 @@ export default function SummonTab() {
           >
             <div className="absolute inset-0 bg-gradient-to-t from-bg-dark/90 via-bg-dark/20 to-transparent"></div>
           </div>
-          
-          <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col items-center text-center">
-            <div className="mb-2 px-3 py-0.5 border border-accent/50 rounded-sm bg-accent/5 backdrop-blur-sm">
-              <span className="text-[10px] tracking-[0.2em] text-accent font-bold uppercase">绝密水墨卷</span>
-            </div>
-            <h2 className="font-serif text-3xl font-bold text-ink mb-2 tracking-widest">水墨丹青</h2>
-            <p className="text-xs text-ink-light font-medium leading-relaxed max-w-[200px] font-serif">研墨挥毫，唤醒画卷中沉睡的千古英魂</p>
-          </div>
 
           {/* Corners (Chinese style brackets) */}
           <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-ink/40"></div>
@@ -71,7 +66,7 @@ export default function SummonTab() {
           <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-ink/40"></div>
         </div>
 
-        <div className="mt-4 flex items-center gap-2 text-[10px] text-ink-light bg-white/60 px-3 py-1.5 rounded-full border border-ink/10 backdrop-blur-sm shadow-sm">
+        <div className="mt-4 flex items-center gap-2 text-[10px] text-ink-light bg-primary/60 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-sm shadow-sm">
           <Info className="w-3 h-3" />
           <span>寻访概率：名将 2.0%, 良将 15%, 裨将 83%</span>
         </div>
@@ -85,7 +80,7 @@ export default function SummonTab() {
           <button 
             onClick={() => handleSummon(1)}
             disabled={isSummoning}
-            className="flex-1 group relative flex flex-col items-center justify-center py-4 bg-white/80 backdrop-blur-md border border-ink/20 rounded-sm active:scale-95 transition-all disabled:opacity-50 shadow-sm"
+            className="flex-1 group relative flex flex-col items-center justify-center py-4 bg-primary/80 backdrop-blur-md border border-white/10 rounded-sm active:scale-95 transition-all disabled:opacity-50 shadow-sm"
           >
             <span className="font-serif text-lg font-bold text-ink">寻访一次</span>
             <div className="flex items-center gap-1 mt-1">
@@ -109,14 +104,15 @@ export default function SummonTab() {
         </div>
         <p className="text-center text-[10px] text-ink-light mt-4 tracking-widest font-medium">每寻访20次必得一名五星名将</p>
       </div>
+      </div>
 
-      {/* Floating Back Button */}
-      <div className="fixed bottom-6 left-4 z-50">
+      {/* Fixed Bottom Bar */}
+      <div className="absolute bottom-0 left-0 w-full h-16 bg-bg-panel/95 backdrop-blur-md border-t border-white/10 flex items-center px-4 z-50">
         <button 
           onClick={() => setActiveTab('battle')}
-          className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md border border-ink/20 flex items-center justify-center shadow-lg active:scale-95 transition-transform text-ink"
+          className="w-10 h-10 rounded-full bg-primary/80 border border-white/10 flex items-center justify-center shadow-sm active:scale-95 transition-transform text-ink"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
         </button>
       </div>
     </div>

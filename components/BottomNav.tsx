@@ -7,7 +7,7 @@ export default function BottomNav() {
 
   return (
     <div className="absolute bottom-0 left-0 w-full z-50">
-      <div className="flex gap-2 border-t border-ink/10 bg-bg-panel/95 backdrop-blur-xl px-2 pb-6 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <div className="flex gap-2 border-t border-white/10 bg-bg-panel/95 backdrop-blur-xl px-2 pb-6 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
         <button onClick={() => setActiveTab('summon')} className={`flex flex-1 flex-col items-center justify-center gap-1 ${activeTab === 'summon' ? 'text-accent' : 'text-ink-light hover:text-ink'} transition-colors`}>
           <div className={`flex h-8 items-center justify-center`}>
             <Sparkles size={24} />

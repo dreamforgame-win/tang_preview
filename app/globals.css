@@ -2,26 +2,26 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-primary: #1A1A1A; /* 浓墨 */
-  --color-accent: #8B1A1A; /* 朱砂红 */
-  --color-gold: #B8860B; /* 暗金 */
-  --color-jade: #4A5D23; /* 墨绿 */
-  --color-bg-light: #FFFFFF;
-  --color-bg-dark: #EAE5D9; /* 宣纸深 */
-  --color-bg-panel: #F5F5F0; /* 宣纸浅 */
-  --color-ink: #1A1A1A;
-  --color-ink-light: #5C5C5C;
+  --color-primary: #0F172A; /* 深灰蓝 */
+  --color-accent: #3B82F6; /* 亮蓝色 */
+  --color-gold: #FCD34D; /* 浅金 */
+  --color-jade: #34D399; /* 翠绿 */
+  --color-bg-light: #1E293B; /* 稍浅的灰蓝 */
+  --color-bg-dark: #020617; /* 极深的夜空蓝 */
+  --color-bg-panel: #0F172A; /* 面板底色 */
+  --color-ink: #F8FAFC; /* 文字颜色改为亮色 */
+  --color-ink-light: #94A3B8; /* 次要文字颜色 */
 }
 
 @layer utilities {
   .altar-gradient {
-    background: radial-gradient(circle at center, rgba(234, 229, 217, 1) 0%, rgba(245, 245, 240, 1) 100%);
+    background: radial-gradient(circle at center, rgba(2, 6, 23, 1) 0%, rgba(15, 23, 42, 1) 100%);
   }
   .gold-glow {
-    text-shadow: 0 0 10px rgba(184, 134, 11, 0.4);
+    text-shadow: 0 0 10px rgba(252, 211, 77, 0.4);
   }
   .scroll-glow {
-    box-shadow: 0 0 30px rgba(26, 26, 26, 0.1);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.1);
   }
   .perspective-grid {
     perspective: 1000px;
@@ -31,13 +31,24 @@
     transform-style: preserve-3d;
   }
   .ink-splash {
-    background: radial-gradient(circle, rgba(139,26,26,0.1) 0%, rgba(139,26,26,0) 70%);
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0) 70%);
   }
 }
 
 body {
   background-color: var(--color-bg-dark);
   color: var(--color-ink);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 input[type=range] {
@@ -50,7 +61,7 @@ input[type=range]::-webkit-slider-thumb {
   width: 14px;
   border-radius: 50%;
   background: var(--color-accent);
-  box-shadow: 0 0 4px rgba(139, 26, 26, 0.5);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
   cursor: pointer;
   margin-top: -5px;
 }

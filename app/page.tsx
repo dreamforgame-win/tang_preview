@@ -1,12 +1,19 @@
 'use client';
+import { useState } from 'react';
 import { useGameState } from '@/components/GameStateProvider';
 import SummonTab from '@/components/tabs/SummonTab';
 import GalleryTab from '@/components/tabs/GalleryTab';
 import LineupTab from '@/components/tabs/LineupTab';
 import BattleTab from '@/components/tabs/BattleTab';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function App() {
   const { activeTab } = useGameState();
+  const [isLoading, setIsLoading] = useState(true);
+
+  if (isLoading) {
+    return <LoadingScreen onComplete={() => setIsLoading(false)} />;
+  }
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden">
