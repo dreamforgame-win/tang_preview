@@ -77,8 +77,7 @@ const EmptyRow = () => (
 );
 
 export default function LineupTab() {
-  const { heroes, lineups, lineup, currentLineupIndex, setCurrentLineupIndex, updateHeroTroops, quickAssign, setActiveTab, setFullLineup, addHeroToRoster } = useGameState();
-  const [activeTab, setLocalActiveTab] = useState('troops');
+  const { heroes, lineups, lineup, currentLineupIndex, setCurrentLineupIndex, updateHeroTroops, quickAssign, setActiveTab, setFullLineup, addHeroToRoster, lineupSubTab, setLineupSubTab } = useGameState();
   
   // Filtering state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -416,20 +415,20 @@ export default function LineupTab() {
         {/* Tabs */}
         <nav className="flex border-b border-ink/10 bg-bg-panel/80 backdrop-blur-md sticky top-0 z-40 shrink-0">
           <button 
-            onClick={() => setLocalActiveTab('troops')}
-            className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${activeTab === 'troops' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
+            onClick={() => setLineupSubTab('troops')}
+            className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${lineupSubTab === 'troops' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
           >
             兵力配置
           </button>
           <button 
-            onClick={() => setLocalActiveTab('heroes')}
-            className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${activeTab === 'heroes' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
+            onClick={() => setLineupSubTab('heroes')}
+            className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${lineupSubTab === 'heroes' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
           >
             武将配置
           </button>
           <button 
-            onClick={() => setLocalActiveTab('runes')}
-            className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${activeTab === 'runes' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
+            onClick={() => setLineupSubTab('runes')}
+            className={`flex-1 py-3 border-b-2 font-bold text-sm tracking-wider transition-colors ${lineupSubTab === 'runes' ? 'border-accent text-accent' : 'border-transparent text-ink-light'}`}
           >
             阵符配置
           </button>
@@ -437,7 +436,7 @@ export default function LineupTab() {
 
         {/* Content Area */}
         <div className="flex-1 relative">
-          {activeTab === 'troops' && (
+          {lineupSubTab === 'troops' && (
             <section className="p-3 space-y-2">
               {Array.from({ length: 3 }).map((_, index) => {
                 const placedHeroes = lineup.map((id, idx) => id ? { id, idx } : null).filter(Boolean);
@@ -471,7 +470,7 @@ export default function LineupTab() {
             </section>
           )}
 
-          {activeTab === 'heroes' && (
+          {lineupSubTab === 'heroes' && (
             <section 
               className="p-4 flex flex-col h-full"
               data-drop-zone="remove"
@@ -573,7 +572,7 @@ export default function LineupTab() {
             </section>
           )}
 
-          {activeTab === 'runes' && (
+          {lineupSubTab === 'runes' && (
             <section className="p-4 flex items-center justify-center h-40 text-ink-light font-serif">
               阵符系统暂未开放
             </section>

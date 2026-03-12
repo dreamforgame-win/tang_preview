@@ -1,7 +1,8 @@
 'use client';
-import { useGameState } from '@/components/GameStateProvider';
-import { Sparkles, Users, BookOpen, Map as MapIcon, X, Home } from 'lucide-react';
+import { useGameState, March } from '@/components/GameStateProvider';
+import { Sparkles, Users, BookOpen, Map as MapIcon, X, Home, Sword, Navigation, Settings } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { HERO_GALLERY } from '@/data/heroes';
 
 type TileType = 'plains' | 'city' | 'mountain' | 'lake' | 'village' | 'forest' | 'iron' | 'town';
 
@@ -17,12 +18,64 @@ const MAP_HEIGHT = 15;
 const HEX_WIDTH = 80;
 const HEX_HEIGHT = 92;
 
+// Hex coordinate conversion
+function cube_to_axial(q: number, r: number, s: number) {
+  return { col: q + Math.floor(r / 2), row: r };
+}
+
+function axial_to_cube(col: number, row: number) {
+  const q = col - Math.floor(row / 2);
+  const r = row;
+  const s = -q - r;
+  return { q, r, s };
+}
+
+function cube_lerp(a: any, b: any, t: number) {
+  return {
+    q: a.q + (b.q - a.q) * t,
+    r: a.r + (b.r - a.r) * t,
+    s: a.s + (b.s - a.s) * t
+  };
+}
+
+function cube_round(cube: any) {
+  let q = Math.round(cube.q);
+  let r = Math.round(cube.r);
+  let s = Math.round(cube.s);
+
+  const q_diff = Math.abs(q - cube.q);
+  const r_diff = Math.abs(r - cube.r);
+  const s_diff = Math.abs(s - cube.s);
+
+  if (q_diff > r_diff && q_diff > s_diff) {
+    q = -r - s;
+  } else if (r_diff > s_diff) {
+    r = -q - s;
+  } else {
+    s = -q - r;
+  }
+
+  return { q, r, s };
+}
+
+function getHexPath(col1: number, row1: number, col2: number, row2: number) {
+  const start = axial_to_cube(col1, row1);
+  const end = axial_to_cube(col2, row2);
+  const dist = hexDistance(col1, row1, col2, row2);
+  const results = [];
+  for (let i = 0; i <= dist; i++) {
+    const t = dist === 0 ? 0 : i / dist;
+    const lerp = cube_lerp(start, end, t);
+    const rounded = cube_round(lerp);
+    results.push(cube_to_axial(rounded.q, rounded.r, rounded.s));
+  }
+  return results;
+}
+
 function hexDistance(col1: number, row1: number, col2: number, row2: number) {
-  const q1 = col1 - Math.floor(row1 / 2);
-  const r1 = row1;
-  const q2 = col2 - Math.floor(row2 / 2);
-  const r2 = row2;
-  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(-q1 - r1 + q2 + r2));
+  const a = axial_to_cube(col1, row1);
+  const b = axial_to_cube(col2, row2);
+  return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(a.s - b.s));
 }
 
 const generateMap = () => {
@@ -121,10 +174,39 @@ const getTileName = (type: TileType) => {
 };
 
 export default function BattleTab() {
-  const { setActiveTab } = useGameState();
+  const { setActiveTab, lineups, heroes, addMarch, removeMarch, marches, setCurrentLineupIndex, setLineupSubTab } = useGameState();
   const [mapData, setMapData] = useState<TileData[]>(generateMap);
   const [selectedTile, setSelectedTile] = useState<TileData | null>(null);
+  const [selectedMarchId, setSelectedMarchId] = useState<string | null>(null);
   
+  // March Selection State
+  const [isMarchOpen, setIsMarchOpen] = useState(false);
+  const [selectedLineupIdx, setSelectedLineupIdx] = useState(0);
+  const [isViewLocked, setIsViewLocked] = useState(true);
+  
+  const [currentTime, setCurrentTime] = useState(0);
+  
+  // Animation loop
+  useEffect(() => {
+    if (marches.length === 0) return;
+    let frameId: number;
+    const update = () => {
+      const now = Date.now();
+      setCurrentTime(now);
+      
+      // Check for arrived marches
+      marches.forEach(m => {
+        if (now - m.startTime >= m.duration && m.status === 'marching') {
+          removeMarch(m.id);
+        }
+      });
+
+      frameId = requestAnimationFrame(update);
+    };
+    frameId = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frameId);
+  }, [marches, removeMarch]);
+
   // Viewport state
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -141,7 +223,7 @@ export default function BattleTab() {
     if (!containerRef.current) return;
     const mapWidth = MAP_WIDTH * HEX_WIDTH + HEX_WIDTH / 2;
     const mapHeight = MAP_HEIGHT * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 4;
-    const currentRotateX = ((zoom - 0.5) / 1.3) * 45;
+    const currentRotateX = ((zoom - 1.0) / 1.0) * 45;
     const rotateXRad = currentRotateX * Math.PI / 180;
     const W = mapWidth * zoom;
     const H = mapHeight * zoom * Math.cos(rotateXRad);
@@ -165,7 +247,7 @@ export default function BattleTab() {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom(z => Math.max(0.5, Math.min(1.8, z + zoomDelta)));
+      setZoom(z => Math.max(1.0, Math.min(2.0, z + zoomDelta)));
       setSelectedTile(null);
     };
 
@@ -177,13 +259,11 @@ export default function BattleTab() {
     setIsDragging(true);
     lastPos.current = { x: e.clientX, y: e.clientY };
     dragDistance.current = 0;
-    if (e.pointerType !== 'mouse') {
-      // For touch, we handle pinch in touch events
-    }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
+    if (isMarchOpen && isViewLocked) return;
     
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
@@ -199,7 +279,7 @@ export default function BattleTab() {
     if (containerRef.current) {
       const mapWidth = MAP_WIDTH * HEX_WIDTH + HEX_WIDTH / 2;
       const mapHeight = MAP_HEIGHT * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 4;
-      const currentRotateX = ((zoom - 0.5) / 1.3) * 45;
+      const currentRotateX = ((zoom - 1.0) / 1.0) * 45;
       const rotateXRad = currentRotateX * Math.PI / 180;
       const W = mapWidth * zoom;
       const H = mapHeight * zoom * Math.cos(rotateXRad);
@@ -229,7 +309,7 @@ export default function BattleTab() {
       
       if (lastTouchDist.current !== null) {
         const delta = dist - lastTouchDist.current;
-        setZoom(z => Math.max(0.5, Math.min(1.8, z + delta * 0.01)));
+        setZoom(z => Math.max(1.0, Math.min(2.0, z + delta * 0.01)));
         setSelectedTile(null);
       }
       lastTouchDist.current = dist;
@@ -242,6 +322,16 @@ export default function BattleTab() {
 
   const handleTileClick = (tile: TileData) => {
     if (dragDistance.current > 5) return;
+    
+    // Deselect march if clicking a tile
+    setSelectedMarchId(null);
+
+    if (isMarchOpen) {
+      if (isViewLocked) {
+        setIsMarchOpen(false);
+      }
+      return;
+    }
     setSelectedTile(prev => prev?.col === tile.col && prev?.row === tile.row ? null : tile);
   };
 
@@ -258,10 +348,43 @@ export default function BattleTab() {
     if (city) centerOnTile(city.col, city.row);
   };
 
+  const cityTile = useMemo(() => mapData.find(t => t.type === 'city')!, [mapData]);
+
+  const marchPath = useMemo(() => {
+    if (!selectedTile || !isMarchOpen) return [];
+    return getHexPath(cityTile.col, cityTile.row, selectedTile.col, selectedTile.row);
+  }, [selectedTile, isMarchOpen, cityTile]);
+
+  const handleStartMarch = () => {
+    if (!selectedTile) return;
+    
+    const selectedLineup = lineups[selectedLineupIdx];
+    if (!selectedLineup.some(id => id !== null)) return;
+
+    const dist = hexDistance(cityTile.col, cityTile.row, selectedTile.col, selectedTile.row);
+    const march: March = {
+      id: Math.random().toString(36).substr(2, 9),
+      lineupIndex: selectedLineupIdx,
+      from: { col: cityTile.col, row: cityTile.row },
+      to: { col: selectedTile.col, row: selectedTile.row },
+      startTime: Date.now(),
+      duration: dist * 5000, // 5 seconds per hex
+      status: 'marching'
+    };
+    addMarch(march);
+    setIsMarchOpen(false);
+    setSelectedTile(null);
+  };
+
+  const handleGoToLineupSettings = (idx: number) => {
+    setCurrentLineupIndex(idx);
+    setLineupSubTab('heroes');
+    setActiveTab('lineup');
+    setIsMarchOpen(false);
+  };
+
   // Calculate rotateX based on zoom
-  // zoom = 0.5 -> rotateX = 0deg (top-down)
-  // zoom = 1.8 -> rotateX = 45deg (angled)
-  const rotateX = ((zoom - 0.5) / 1.3) * 45;
+  const rotateX = ((zoom - 1.0) / 1.0) * 45;
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden bg-[#c2b2a1] select-none">
@@ -276,6 +399,11 @@ export default function BattleTab() {
         onPointerLeave={handlePointerUp}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={() => {
+          if (dragDistance.current < 5) {
+            setSelectedMarchId(null);
+          }
+        }}
       >
         <div 
           className="absolute top-1/2 left-1/2"
@@ -287,6 +415,7 @@ export default function BattleTab() {
             transition: isDragging ? 'none' : 'transform 0.1s ease-out'
           }}
         >
+          {/* Tiles */}
           {mapData.map((tile, i) => {
             const x = tile.col * HEX_WIDTH + (tile.row % 2 === 1 ? HEX_WIDTH / 2 : 0);
             const y = tile.row * HEX_HEIGHT * 0.75;
@@ -304,7 +433,6 @@ export default function BattleTab() {
                   transformStyle: 'preserve-3d',
                 }}
               >
-                {/* Hexagon Shape */}
                 <svg
                   width={HEX_WIDTH}
                   height={HEX_HEIGHT}
@@ -321,7 +449,6 @@ export default function BattleTab() {
                   />
                 </svg>
 
-                {/* Content & UI */}
                 <div 
                   className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
                   style={{ transform: `rotateX(${-rotateX}deg)` }}
@@ -343,8 +470,122 @@ export default function BattleTab() {
             );
           })}
 
-          {/* Selected Tile UI Overlay (Rendered in 3D space but above tiles) */}
-          {selectedTile && (
+          {/* Path Line */}
+          {(marchPath.length > 1 || selectedMarchId) && (
+            <svg 
+              className="absolute inset-0 pointer-events-none overflow-visible z-40"
+              style={{ transformStyle: 'preserve-3d' }}
+            >
+              {/* Target Selection Path */}
+              {marchPath.length > 1 && (
+                <polyline
+                  points={marchPath.map(p => {
+                    const x = p.col * HEX_WIDTH + (p.row % 2 === 1 ? HEX_WIDTH / 2 : 0) + HEX_WIDTH / 2;
+                    const y = p.row * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 2;
+                    return `${x},${y}`;
+                  }).join(' ')}
+                  fill="none"
+                  stroke="#4ade80"
+                  strokeWidth="4"
+                  strokeDasharray="8,8"
+                  className="opacity-80 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]"
+                />
+              )}
+
+              {/* Selected March Path */}
+              {marches.filter(m => m.id === selectedMarchId).map(m => {
+                const path = getHexPath(m.from.col, m.from.row, m.to.col, m.to.row);
+                return (
+                  <polyline
+                    key={`path-${m.id}`}
+                    points={path.map(p => {
+                      const x = p.col * HEX_WIDTH + (p.row % 2 === 1 ? HEX_WIDTH / 2 : 0) + HEX_WIDTH / 2;
+                      const y = p.row * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 2;
+                      return `${x},${y}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="#4ade80"
+                    strokeWidth="3"
+                    strokeDasharray="6,6"
+                    className="opacity-60"
+                  />
+                );
+              })}
+            </svg>
+          )}
+
+          {/* Active Marches */}
+          {marches.map(m => {
+            const elapsed = currentTime > 0 ? currentTime - m.startTime : 0;
+            const progress = Math.max(0, Math.min(1, elapsed / m.duration));
+            
+            // Calculate path-based position
+            const path = getHexPath(m.from.col, m.from.row, m.to.col, m.to.row);
+            let curX, curY;
+            
+            if (path.length <= 1) {
+              curX = m.from.col * HEX_WIDTH + (m.from.row % 2 === 1 ? HEX_WIDTH / 2 : 0) + HEX_WIDTH / 2;
+              curY = m.from.row * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 2;
+            } else {
+              const segmentCount = path.length - 1;
+              const segmentProgress = progress * segmentCount;
+              const segmentIndex = Math.min(Math.floor(segmentProgress), segmentCount - 1);
+              const t = segmentProgress - segmentIndex;
+              
+              const p1 = path[segmentIndex];
+              const p2 = path[segmentIndex + 1];
+              
+              const x1 = p1.col * HEX_WIDTH + (p1.row % 2 === 1 ? HEX_WIDTH / 2 : 0) + HEX_WIDTH / 2;
+              const y1 = p1.row * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 2;
+              const x2 = p2.col * HEX_WIDTH + (p2.row % 2 === 1 ? HEX_WIDTH / 2 : 0) + HEX_WIDTH / 2;
+              const y2 = p2.row * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 2;
+              
+              curX = x1 + (x2 - x1) * t;
+              curY = y1 + (y2 - y1) * t;
+            }
+
+            const lineup = lineups[m.lineupIndex];
+            const firstHeroId = lineup.find(id => id !== null);
+            const isSelected = selectedMarchId === m.id;
+            
+            return (
+              <div 
+                key={m.id}
+                className={`absolute z-[60] ${isSelected ? 'brightness-125' : ''}`}
+                style={{ 
+                  left: curX, 
+                  top: curY, 
+                  transform: `translate(-50%, -80%) rotateX(${-rotateX}deg)`,
+                  transformStyle: 'preserve-3d'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedMarchId(m.id);
+                  setSelectedTile(null);
+                }}
+              >
+                <div className="relative flex flex-col items-center cursor-pointer pointer-events-auto">
+                  {firstHeroId ? (
+                    <img 
+                      src={`https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/hero-chess/${firstHeroId}.png`}
+                      alt="march"
+                      className={`w-16 h-16 object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)] transition-transform ${isSelected ? 'scale-110' : ''}`}
+                    />
+                  ) : (
+                    <div className="bg-accent w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                      <Navigation size={12} className="text-white rotate-45" />
+                    </div>
+                  )}
+                  <div className={`bg-black/60 px-1.5 py-0.5 rounded-sm border mt-1 transition-colors ${isSelected ? 'border-accent bg-accent/40' : 'border-white/20'}`}>
+                    <span className="text-[8px] font-bold text-white whitespace-nowrap">阵容{['一', '二', '三', '四', '五'][m.lineupIndex]}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Selected Tile UI Overlay */}
+          {selectedTile && !isMarchOpen && (
             <div
               className="absolute pointer-events-none"
               style={{
@@ -355,20 +596,23 @@ export default function BattleTab() {
                 zIndex: 1000,
               }}
             >
-              {/* Name Above */}
               <div className="absolute bottom-[40px] left-1/2 -translate-x-1/2 mb-2 bg-black/70 text-white px-3 py-1 rounded-sm text-xs font-bold whitespace-nowrap pointer-events-auto border border-white/20 shadow-lg">
                 {getTileName(selectedTile.type)} {selectedTile.level ? `Lv.${selectedTile.level}` : ''}
               </div>
-              {/* Coords Below */}
               <div className="absolute top-[40px] left-1/2 -translate-x-1/2 mt-2 bg-black/70 text-white px-3 py-1 rounded-sm text-xs font-mono whitespace-nowrap pointer-events-auto border border-white/20 shadow-lg">
                 ({selectedTile.col}, {selectedTile.row})
               </div>
-              {/* Buttons Right */}
               <div className="absolute left-[40px] top-1/2 -translate-y-1/2 ml-3 flex flex-col gap-2 pointer-events-auto">
-                <button className="bg-black/70 text-white px-4 py-1.5 rounded-sm text-xs font-bold hover:bg-black/90 active:scale-95 whitespace-nowrap border border-white/20 shadow-lg transition-transform">
+                <button 
+                  onClick={() => setIsMarchOpen(true)}
+                  className="bg-black/70 text-white px-4 py-1.5 rounded-sm text-xs font-bold hover:bg-black/90 active:scale-95 whitespace-nowrap border border-white/20 shadow-lg transition-transform"
+                >
                   攻占
                 </button>
-                <button className="bg-black/70 text-white px-4 py-1.5 rounded-sm text-xs font-bold hover:bg-black/90 active:scale-95 whitespace-nowrap border border-white/20 shadow-lg transition-transform">
+                <button 
+                  onClick={() => setIsMarchOpen(true)}
+                  className="bg-black/70 text-white px-4 py-1.5 rounded-sm text-xs font-bold hover:bg-black/90 active:scale-95 whitespace-nowrap border border-white/20 shadow-lg transition-transform"
+                >
                   行军
                 </button>
               </div>
@@ -377,10 +621,122 @@ export default function BattleTab() {
         </div>
       </div>
 
+      {/* March Selection Bottom Sheet */}
+      {isMarchOpen && (
+        <div className="fixed inset-x-0 bottom-0 z-[100] flex justify-center pointer-events-none">
+          <div className="w-full max-w-md bg-bg-panel/95 backdrop-blur-md border-t border-white/20 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col h-[35vh] animate-in slide-in-from-bottom-full duration-300 pointer-events-auto">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-4">
+                <h3 className="font-serif font-bold text-lg text-ink tracking-widest">选择部队</h3>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative flex items-center">
+                    <input 
+                      type="checkbox" 
+                      checked={isViewLocked}
+                      onChange={(e) => setIsViewLocked(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-4 h-4 border border-white/30 rounded-sm bg-black/20 peer-checked:bg-accent peer-checked:border-accent transition-colors"></div>
+                    <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-ink-light group-hover:text-ink transition-colors">锁定视角</span>
+                </label>
+              </div>
+              <button onClick={() => setIsMarchOpen(false)} className="p-1 text-ink-light hover:text-ink">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-x-auto p-4">
+              <div className="flex gap-3 h-full pb-2">
+                {lineups.map((lu, idx) => {
+                  const firstHeroId = lu.find(id => id !== null);
+                  const firstHero = firstHeroId ? heroes.find(h => h.id === firstHeroId) : null;
+                  const totalTroops = lu.reduce((sum, id) => {
+                    const h = id ? heroes.find(hero => hero.id === id) : null;
+                    return sum + (h?.troops || 0);
+                  }, 0);
+                  const isSelected = selectedLineupIdx === idx;
+                  const isEmpty = !firstHero;
+
+                  return (
+                    <div key={idx} className="relative h-full flex-shrink-0">
+                      <button
+                        onClick={() => !isEmpty && setSelectedLineupIdx(idx)}
+                        disabled={isEmpty}
+                        className={`w-28 h-full rounded-lg border-2 transition-all relative overflow-hidden flex flex-col ${isSelected ? 'border-accent shadow-[0_0_15px_rgba(139,26,26,0.4)] scale-105 z-10' : 'border-white/10 bg-primary/20'} ${isEmpty ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                      >
+                        {firstHero ? (
+                          <>
+                            {/* Full Box Avatar */}
+                            <div 
+                              className="absolute inset-0 bg-cover bg-top transition-transform duration-500 hover:scale-110"
+                              style={{ backgroundImage: `url(${firstHero.avatar})` }}
+                            ></div>
+                            {/* Overlay Gradients */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
+                            
+                            {/* Content */}
+                            <div className="relative h-full flex flex-col p-2 justify-between">
+                              <div className="text-[10px] font-bold text-white/90 uppercase drop-shadow-md">阵容 {['一', '二', '三', '四', '五'][idx]}</div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-white drop-shadow-md truncate w-full text-center">{firstHero.name}</span>
+                                <div className="mt-1 text-[9px] font-bold text-white bg-accent/80 px-1.5 py-0.5 rounded-full border border-white/20 backdrop-blur-sm">
+                                  兵力: {totalTroops.toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center p-2 gap-2">
+                            <div className="text-[10px] font-bold text-ink-light uppercase">阵容 {['一', '二', '三', '四', '五'][idx]}</div>
+                            <div className="flex-1 flex items-center justify-center text-ink-light/40 font-serif text-xs text-center">
+                              未配置阵容
+                            </div>
+                          </div>
+                        )}
+                        {isSelected && (
+                          <div className="absolute bottom-1 right-1 bg-accent text-white rounded-full p-0.5 shadow-md">
+                            <Sword size={10} />
+                          </div>
+                        )}
+                      </button>
+                      
+                      {/* Settings Button */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGoToLineupSettings(idx);
+                        }}
+                        className="absolute top-1 right-1 z-20 p-1.5 bg-black/40 backdrop-blur-md border border-white/20 rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-all shadow-lg active:scale-90"
+                      >
+                        <Settings size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-4 pt-0 shrink-0">
+              <button 
+                onClick={handleStartMarch}
+                disabled={!lineups[selectedLineupIdx]?.some(id => id !== null)}
+                className="w-full bg-accent disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-serif font-bold text-lg py-3 rounded-sm shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                <Sword size={20} />
+                出征
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Overlay */}
-      <div className="absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col p-4 pb-6 gap-4 z-40">
+      <div className={`absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col p-4 pb-6 gap-4 z-40 transition-transform duration-300 ${isMarchOpen ? 'translate-y-full' : ''}`}>
         <div className="flex justify-between items-end w-full">
-          {/* Main City Button (Circular, bottom left) */}
           <button 
             onClick={handleGoHome}
             className="pointer-events-auto w-14 h-14 rounded-full bg-primary/90 text-ink flex flex-col items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.4)] active:scale-95 transition-transform border border-white/10"
@@ -389,7 +745,6 @@ export default function BattleTab() {
             <span className="text-[10px] font-bold tracking-widest">主城</span>
           </button>
 
-          {/* Summon Button (Circular, bottom right) */}
           <button 
             onClick={() => setActiveTab('summon')}
             className="pointer-events-auto w-14 h-14 rounded-full bg-accent text-white flex flex-col items-center justify-center shadow-[0_4px_15px_rgba(139,26,26,0.4)] active:scale-95 transition-transform border-2 border-white/20"
@@ -399,7 +754,6 @@ export default function BattleTab() {
           </button>
         </div>
 
-        {/* Bottom Bar (Heroes & Formation) */}
         <div className="pointer-events-auto w-full flex gap-3 mt-2">
           <button 
             onClick={() => setActiveTab('gallery')}

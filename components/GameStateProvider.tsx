@@ -17,6 +17,17 @@ type Hero = {
 };
 
 export type TabType = 'summon' | 'gallery' | 'lineup' | 'battle';
+export type LineupSubTabType = 'troops' | 'heroes' | 'runes';
+
+export type March = {
+  id: string;
+  lineupIndex: number;
+  from: { col: number, row: number };
+  to: { col: number, row: number };
+  startTime: number;
+  duration: number;
+  status: 'marching' | 'returning' | 'arrived';
+};
 
 type GameState = {
   activeTab: TabType;
@@ -28,6 +39,8 @@ type GameState = {
   currentLineupIndex: number;
   setCurrentLineupIndex: (index: number) => void;
   lineup: (string | null)[];
+  lineupSubTab: LineupSubTabType;
+  setLineupSubTab: (tab: LineupSubTabType) => void;
   setCoins: (val: number) => void;
   setTokens: (val: number) => void;
   updateHeroTroops: (id: string, troops: number) => void;
@@ -37,6 +50,9 @@ type GameState = {
   addHeroToRoster: (heroId: string) => { status: 'new' | 'converted', quality: string };
   ascendHero: (heroId: string) => void;
   pityCounter: number;
+  marches: March[];
+  addMarch: (march: March) => void;
+  removeMarch: (id: string) => void;
 };
 
 const GameStateContext = createContext<GameState | null>(null);
@@ -64,8 +80,18 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     Array.from({ length: 5 }, () => Array(9).fill(null))
   );
   const [currentLineupIndex, setCurrentLineupIndex] = useState(0);
+  const [lineupSubTab, setLineupSubTab] = useState<LineupSubTabType>('troops');
+  const [marches, setMarches] = useState<March[]>([]);
   
   const lineup = lineups[currentLineupIndex];
+
+  const addMarch = (march: March) => {
+    setMarches(prev => [...prev, march]);
+  };
+
+  const removeMarch = (id: string) => {
+    setMarches(prev => prev.filter(m => m.id !== id));
+  };
 
   const updateHeroTroops = (id: string, troops: number) => {
     setHeroes(heroes.map(h => h.id === id ? { ...h, troops } : h));
@@ -142,7 +168,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     <GameStateContext.Provider value={{ 
       activeTab, setActiveTab, coins, tokens, heroes, 
       lineups, currentLineupIndex, setCurrentLineupIndex, lineup, 
-      setCoins, setTokens, updateHeroTroops, quickAssign, setLineupSlot, setFullLineup, addHeroToRoster, ascendHero, pityCounter
+      lineupSubTab, setLineupSubTab,
+      setCoins, setTokens, updateHeroTroops, quickAssign, setLineupSlot, setFullLineup, addHeroToRoster, ascendHero, pityCounter,
+      marches, addMarch, removeMarch
     }}>
       {children}
     </GameStateContext.Provider>
