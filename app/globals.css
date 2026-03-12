@@ -51,6 +51,19 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+.show-scrollbar::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+}
+.show-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(59, 130, 246, 0.5);
+  border-radius: 3px;
+}
+.show-scrollbar {
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+}
+
 input[type=range] {
   -webkit-appearance: none;
   background: transparent;

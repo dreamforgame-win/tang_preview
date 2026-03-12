@@ -238,6 +238,14 @@ export default function LineupTab() {
   });
 
   const sortedFilteredHeroes = [...filteredHeroes].sort((a, b) => {
+    const aState = heroes.find(h => h.id === a.id);
+    const bState = heroes.find(h => h.id === b.id);
+    const aLocked = aState?.locked ?? true;
+    const bLocked = bState?.locked ?? true;
+
+    if (aLocked && !bLocked) return 1;
+    if (!aLocked && bLocked) return -1;
+
     const aLineups = getHeroLineups(a.id);
     const bLineups = getHeroLineups(b.id);
     if (aLineups.length === 0 && bLineups.length > 0) return -1;
@@ -481,21 +489,29 @@ export default function LineupTab() {
               }}
             >
               {/* Horizontal Scroll List */}
-              <div className="w-full overflow-x-auto pb-4 hide-scrollbar">
+              <div className="w-full overflow-x-auto pb-4 show-scrollbar">
                 <div className="flex gap-3 w-max px-1">
                   {sortedFilteredHeroes.map(hero => {
                     const heroLineups = getHeroLineups(hero.id);
                     const isPlaced = heroLineups.length > 0;
+                    const heroState = heroes.find(h => h.id === hero.id);
                     return (
                     <div 
                       key={hero.id} 
                       draggable
                       onDragStart={(e) => {
+                        if (heroState?.locked) {
+                          e.preventDefault();
+                          return;
+                        }
                         e.dataTransfer.setData('heroId', hero.id);
                         setTimeout(() => setIsDragging(true), 0);
                       }}
                       onDragEnd={() => setIsDragging(false)}
-                      onTouchStart={(e) => handleTouchStart(e, hero.id)}
+                      onTouchStart={(e) => {
+                        if (heroState?.locked) return;
+                        handleTouchStart(e, hero.id);
+                      }}
                       className="flex flex-col items-center cursor-pointer group shrink-0 relative select-none"
                       style={{ WebkitTouchCallout: 'none' }}
                       onClick={(e) => {
@@ -508,6 +524,13 @@ export default function LineupTab() {
                     >
                       <div className={`w-[70px] h-[110px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
                            style={{ backgroundImage: `url(${hero.avatar})` }}>
+                        {heroState?.locked && (
+                          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
+                            <div className="text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            </div>
+                          </div>
+                        )}
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
                           <div className="flex items-center justify-center gap-1 w-full">
                             <span className="text-[8px] font-bold px-1 rounded-sm bg-black/60 text-white whitespace-nowrap">{hero.type[0]}</span>

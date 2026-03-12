@@ -13,12 +13,19 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/card_bg.jpg',
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/summon_bg.jpg',
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/team_bg.jpg',
+      'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/loading_bg.jpg',
     ];
 
     imagesToPreload.forEach(src => {
       const img = new Image();
       img.src = src;
     });
+
+    // Preload video
+    const video = document.createElement('video');
+    video.src = 'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/video/card.mp4';
+    video.preload = 'auto';
+    video.load();
 
     // Animate progress bar over 5 seconds
     const duration = 5000;
@@ -42,24 +49,30 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0f1a] text-white overflow-hidden">
-      {/* Background styling for the loading screen */}
-      <div className="absolute inset-0 opacity-40 bg-[url('https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/team_bg.jpg')] bg-cover bg-center blur-sm" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1a]/60 via-[#0a0f1a]/80 to-[#0a0f1a]" />
+      {/* Background image */}
+      <img 
+        src="https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/loading_bg.jpg" 
+        alt="Login Background" 
+        className="absolute inset-0 w-full h-full object-cover"
+        referrerPolicy="no-referrer"
+      />
 
       <div className="relative z-10 flex flex-col items-center h-full w-full py-20">
         <div className="flex-1 flex items-center justify-center">
-          <h1 className="text-5xl font-serif font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-blue-200 to-blue-600 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] filter drop-shadow-lg" style={{ textShadow: '0 4px 24px rgba(37, 99, 235, 0.6)' }}>
-            河图：唐破阵志
-          </h1>
         </div>
         
         <div className="w-4/5 max-w-sm flex flex-col items-center mt-auto mb-10 h-24 justify-end">
           {!hasStarted ? (
             <button 
               onClick={() => setHasStarted(true)}
-              className="px-8 py-3 bg-blue-900/40 hover:bg-blue-800/60 border border-blue-500/50 rounded-sm text-blue-100 font-serif tracking-widest text-lg shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all active:scale-95"
+              className="transition-all active:scale-95"
             >
-              开始游戏
+              <img 
+                src="https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/UI/btn_login.png" 
+                alt="开始游戏" 
+                className="h-11 w-auto"
+                referrerPolicy="no-referrer"
+              />
             </button>
           ) : (
             <>

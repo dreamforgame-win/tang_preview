@@ -3,8 +3,8 @@ import './globals.css'; // Global styles
 import { GameStateProvider } from '@/components/GameStateProvider';
 
 export const metadata: Metadata = {
-  title: 'My Google AI Studio App',
-  description: 'My Google AI Studio App',
+  title: '河图：唐破阵志',
+  description: '唐朝SLG手游竖屏DEMO',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

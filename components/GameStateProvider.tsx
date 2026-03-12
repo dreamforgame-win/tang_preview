@@ -8,6 +8,9 @@ type Hero = {
   avatar: string;
   troops: number;
   maxTroops: number;
+  starLevel: number;
+  shards: number;
+  locked: boolean;
 };
 
 export type TabType = 'summon' | 'gallery' | 'lineup' | 'battle';
@@ -28,7 +31,9 @@ type GameState = {
   quickAssign: () => void;
   setLineupSlot: (index: number, heroId: string | null) => void;
   setFullLineup: (newLineup: (string | null)[]) => void;
-  addHeroToRoster: (heroId: string) => void;
+  addHeroToRoster: (heroId: string) => { status: 'new' | 'converted', quality: string };
+  ascendHero: (heroId: string) => void;
+  pityCounter: number;
 };
 
 const GameStateContext = createContext<GameState | null>(null);
@@ -37,29 +42,17 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabType>('battle');
   const [coins, setCoins] = useState(12450);
   const [tokens, setTokens] = useState(15);
-  const [heroes, setHeroes] = useState<Hero[]>([
-    {
-      id: 'lishimin',
-      name: '李世民',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lishimin',
-      troops: 8400,
-      maxTroops: 10000,
-    },
-    {
-      id: 'lijing',
-      name: '李靖',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lijing',
-      troops: 5200,
-      maxTroops: 10000,
-    },
-    {
-      id: 'xuerengui',
-      name: '薛仁贵',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=xuerengui',
-      troops: 9100,
-      maxTroops: 10000,
-    }
-  ]);
+  const [pityCounter, setPityCounter] = useState(0);
+  const [heroes, setHeroes] = useState<Hero[]>(HERO_GALLERY.map(h => ({
+    id: h.id,
+    name: h.name,
+    avatar: h.avatar,
+    troops: 10000,
+    maxTroops: 10000,
+    starLevel: 0,
+    shards: 0,
+    locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id)
+  })));
   
   const [lineups, setLineups] = useState<(string | null)[][]>(
     Array.from({ length: 5 }, () => Array(9).fill(null))
@@ -94,26 +87,56 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addHeroToRoster = (heroId: string) => {
-    if (!heroes.find(h => h.id === heroId)) {
-      const heroData = HERO_GALLERY.find(h => h.id === heroId);
-      if (heroData) {
-        setHeroes(prev => [...prev, {
-          id: heroData.id,
-          name: heroData.name,
-          avatar: heroData.avatar,
-          troops: 10000,
-          maxTroops: 10000,
-        }]);
-      }
+  const addHeroToRoster = (heroId: string): { status: 'new' | 'converted', quality: string } => {
+    let status: 'new' | 'converted' = 'converted';
+    const hero = HERO_GALLERY.find(h => h.id === heroId);
+    const quality = hero?.quality || '裨将';
+
+    if (quality === '名将') {
+      setPityCounter(0);
+    } else {
+      setPityCounter(prev => prev + 1);
     }
+
+    setHeroes(prev => prev.map(h => {
+      if (h.id === heroId) {
+        if (h.locked) {
+          status = 'new';
+          return { ...h, locked: false };
+        } else {
+          status = 'converted';
+          return { ...h, shards: h.shards + 1 };
+        }
+      }
+      return h;
+    }));
+    return { status, quality };
+  };
+
+  const ascendHero = (heroId: string) => {
+    setHeroes(prev => prev.map(h => {
+      if (h.id === heroId && h.starLevel < 5) {
+        const cost = h.starLevel < 3 ? 1 : 2;
+        if (h.shards >= cost) {
+          return { 
+            ...h, 
+            starLevel: h.starLevel + 1, 
+            shards: h.shards - cost,
+            attack: (h.attack || 0) + 10,
+            magic: (h.magic || 0) + 10,
+            defense: (h.defense || 0) + 10
+          };
+        }
+      }
+      return h;
+    }));
   };
 
   return (
     <GameStateContext.Provider value={{ 
       activeTab, setActiveTab, coins, tokens, heroes, 
       lineups, currentLineupIndex, setCurrentLineupIndex, lineup, 
-      setCoins, setTokens, updateHeroTroops, quickAssign, setLineupSlot, setFullLineup, addHeroToRoster 
+      setCoins, setTokens, updateHeroTroops, quickAssign, setLineupSlot, setFullLineup, addHeroToRoster, ascendHero, pityCounter
     }}>
       {children}
     </GameStateContext.Provider>

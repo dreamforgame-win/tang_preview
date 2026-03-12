@@ -1,28 +1,123 @@
 'use client';
 import { useGameState } from '@/components/GameStateProvider';
 import { ArrowLeft, PlusCircle, Hexagon, Info } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { HERO_GALLERY, HeroDetail } from '@/data/heroes';
+import SummonResult from '@/components/SummonResult';
+import WelfareModal from '@/components/WelfareModal';
 
 export default function SummonTab() {
-  const { coins, tokens, setTokens, setActiveTab } = useGameState();
+  const { coins, tokens, setTokens, setActiveTab, addHeroToRoster, pityCounter } = useGameState();
   const [isSummoning, setIsSummoning] = useState(false);
+  const [summonAmount, setSummonAmount] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [showWelfare, setShowWelfare] = useState(false);
+  const [drawnHeroes, setDrawnHeroes] = useState<HeroDetail[]>([]);
+  const [summonResults, setSummonResults] = useState<{ hero: HeroDetail, status: 'new' | 'converted' }[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleSummon = (amount: number) => {
     if (tokens >= amount) {
       setIsSummoning(true);
-      setTimeout(() => {
-        setTokens(tokens - amount);
-        setIsSummoning(false);
-      }, 1000);
+      setSummonAmount(amount);
+      
+      // Play video
+      const container = document.getElementById('video-container');
+      if (container && videoRef.current) {
+        container.style.display = 'block';
+        videoRef.current.currentTime = 0; // Reset video to start
+        videoRef.current.play();
+      } else {
+        performSummon(amount);
+      }
     } else {
-      alert('寻访令不足！');
+      setShowWelfare(true);
     }
+  };
+
+  const handleWelfareConfirm = () => {
+    setTokens(tokens + 100);
+    setShowWelfare(false);
+  };
+
+  const skipVideo = () => {
+    const container = document.getElementById('video-container');
+    if (container && videoRef.current) {
+      videoRef.current.pause();
+      container.style.display = 'none';
+      performSummon(summonAmount);
+    }
+  };
+
+  const performSummon = (amount: number) => {
+    const results: { hero: HeroDetail, status: 'new' | 'converted' }[] = [];
+    let currentPity = pityCounter;
+
+    for (let i = 0; i < amount; i++) {
+      let quality: '神将' | '名将' | '良将' | '裨将';
+      
+      // Check pity
+      if (currentPity >= 19) {
+        quality = '名将';
+      } else {
+        const rand = Math.random() * 100;
+        if (rand < 2) quality = '名将';
+        else if (rand < 17) quality = '良将';
+        else quality = '裨将';
+      }
+      
+      const pool = HERO_GALLERY.filter(h => h.quality === quality);
+      const hero = pool[Math.floor(Math.random() * pool.length)];
+      const { status } = addHeroToRoster(hero.id);
+      
+      if (hero.quality === '名将') {
+        currentPity = 0;
+      } else {
+        currentPity++;
+      }
+      
+      results.push({ hero, status });
+    }
+    setDrawnHeroes(results.map(r => r.hero));
+    setSummonResults(results);
+    setTokens(tokens - amount);
+    setIsSummoning(false);
+    setShowResult(true);
   };
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden bg-[url('https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/summon_bg.jpg')] bg-cover bg-center">
-      <div className="absolute inset-0 bg-bg-dark/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
       
+      <div 
+        className="absolute inset-0 z-[100] hidden"
+        id="video-container"
+      >
+        <video 
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          src="https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/video/card.mp4"
+          onEnded={() => {
+            const container = document.getElementById('video-container');
+            if (container) container.style.display = 'none';
+            performSummon(summonAmount);
+          }}
+        />
+        <button 
+          onClick={skipVideo}
+          className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-sm text-xs"
+        >
+          点击跳过动画
+        </button>
+      </div>
+
+      {showResult && (
+        <SummonResult results={summonResults} onClose={() => setShowResult(false)} />
+      )}
+
+      {showWelfare && (
+        <WelfareModal onClose={() => setShowWelfare(false)} onConfirm={handleWelfareConfirm} />
+      )}
+
       <div className="flex-1 overflow-y-auto flex flex-col pb-24 relative z-10">
         {/* Header */}
         <div className="sticky top-0 w-full z-20 flex justify-between items-center p-4 bg-gradient-to-b from-bg-dark/80 to-transparent">
@@ -51,21 +146,6 @@ export default function SummonTab() {
 
       {/* Main Scroll */}
       <div className="relative z-10 w-full px-6 flex flex-col items-center mt-8">
-        <div className={`w-full aspect-[4/5] relative rounded-sm overflow-hidden scroll-glow border border-ink/20 bg-bg-panel transition-all duration-1000 ${isSummoning ? 'scale-105 brightness-95 shadow-[0_0_40px_rgba(139,26,26,0.3)]' : ''}`}>
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-90 mix-blend-multiply" 
-            style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAuLVmZv0nA0B-jF5adzFf5xu-muFXAo88t0OpqUruQ3_ajQxJXIbP3a_bRBwnvkcAqwETWNKwNv1bwrQBnHZBrs-W-Y_FGk1k7tRpwQn6GVp0YzFuB4KW6meMeOBZMobhQL0bICSwMiFhDuZsYf0bvZaTda7luhNSj9YXK_J3R4Pe8DanQaYsqkbeChhAzmQ4r50GbmtpjgWZjOkpDKOs0gCJzpBLZ9ghXqARcwxvsK2nCogbeaub2OWcSdbCntWNB8HNzmfKkdLk")' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-bg-dark/90 via-bg-dark/20 to-transparent"></div>
-          </div>
-
-          {/* Corners (Chinese style brackets) */}
-          <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-ink/40"></div>
-          <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-ink/40"></div>
-          <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-ink/40"></div>
-          <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-ink/40"></div>
-        </div>
-
         <div className="mt-4 flex items-center gap-2 text-[10px] text-ink-light bg-primary/60 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-sm shadow-sm">
           <Info className="w-3 h-3" />
           <span>寻访概率：名将 2.0%, 良将 15%, 裨将 83%</span>
@@ -80,7 +160,7 @@ export default function SummonTab() {
           <button 
             onClick={() => handleSummon(1)}
             disabled={isSummoning}
-            className="flex-1 group relative flex flex-col items-center justify-center py-4 bg-primary/80 backdrop-blur-md border border-white/10 rounded-sm active:scale-95 transition-all disabled:opacity-50 shadow-sm"
+            className="flex-1 group relative flex flex-col items-center justify-center h-[50px] bg-primary border border-white/10 rounded-sm active:scale-95 transition-all disabled:opacity-50 shadow-sm"
           >
             <span className="font-serif text-lg font-bold text-ink">寻访一次</span>
             <div className="flex items-center gap-1 mt-1">
@@ -92,17 +172,17 @@ export default function SummonTab() {
           <button 
             onClick={() => handleSummon(5)}
             disabled={isSummoning}
-            className="flex-1 group relative flex flex-col items-center justify-center py-4 bg-accent/5 backdrop-blur-md border-2 border-accent/60 rounded-sm active:scale-95 transition-all disabled:opacity-50 overflow-hidden shadow-sm"
+            className="flex-1 group relative flex flex-col items-center justify-center h-[50px] bg-accent border-2 border-accent rounded-sm active:scale-95 transition-all disabled:opacity-50 overflow-hidden shadow-sm"
           >
             <div className="absolute top-0 right-0 bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-sm shadow-sm">朱砂印</div>
-            <span className="font-serif text-lg font-bold text-accent">寻访五次</span>
+            <span className="font-serif text-lg font-bold text-white">寻访五次</span>
             <div className="flex items-center gap-1 mt-1">
-              <Hexagon className="text-accent w-3 h-3 fill-accent/20" />
-              <span className="text-xs font-bold text-accent">5</span>
+              <Hexagon className="text-white w-3 h-3 fill-white/20" />
+              <span className="text-xs font-bold text-white">5</span>
             </div>
           </button>
         </div>
-        <p className="text-center text-[10px] text-ink-light mt-4 tracking-widest font-medium">每寻访20次必得一名五星名将</p>
+        <p className="text-center text-[10px] mt-4 tracking-widest font-medium" style={{ color: '#101729' }}>每寻访20次必得一名五星名将</p>
       </div>
       </div>
 
