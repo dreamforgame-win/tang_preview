@@ -11,6 +11,9 @@ type Hero = {
   starLevel: number;
   shards: number;
   locked: boolean;
+  attack: number;
+  magic: number;
+  defense: number;
 };
 
 export type TabType = 'summon' | 'gallery' | 'lineup' | 'battle';
@@ -51,7 +54,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     maxTroops: 10000,
     starLevel: 0,
     shards: 0,
-    locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id)
+    locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id),
+    attack: h.attack,
+    magic: h.magic,
+    defense: h.defense
   })));
   
   const [lineups, setLineups] = useState<(string | null)[][]>(
@@ -122,9 +128,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
             ...h, 
             starLevel: h.starLevel + 1, 
             shards: h.shards - cost,
-            attack: (h.attack || 0) + 10,
-            magic: (h.magic || 0) + 10,
-            defense: (h.defense || 0) + 10
+            attack: h.attack + 10,
+            magic: h.magic + 10,
+            defense: h.defense + 10
           };
         }
       }
