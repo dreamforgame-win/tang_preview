@@ -5,6 +5,8 @@ import { useGameState } from './GameStateProvider';
 import { useState } from 'react';
 import StarUpModal from './StarUpModal';
 
+import { useDragScroll } from '@/hooks/useDragScroll';
+
 interface HeroDetailModalProps {
   hero: HeroDetail;
   onClose: () => void;
@@ -15,6 +17,7 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
   const [showStarUp, setShowStarUp] = useState(false);
   const heroState = heroes.find(h => h.id === hero.id);
   const starLevel = heroState?.starLevel || 0;
+  const scrollRef = useDragScroll<HTMLDivElement>({ direction: 'vertical' });
 
   const getTypeColor = (type: string) => {
     switch(type) {
@@ -51,14 +54,12 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-bg-panel via-bg-panel/60 to-transparent"></div>
           
           <div className="relative z-10 flex flex-col gap-2 w-full pb-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-md">{hero.name}</h2>
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Star key={i} size={16} className={i <= starLevel ? 'text-yellow-400 fill-yellow-400' : 'text-gray-500'} />
-                ))}
-              </div>
+            <div className="flex">
+              {[1, 2, 3, 4, 5].slice(0, starLevel).map(i => (
+                <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
+              ))}
             </div>
+            <h2 className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-md">{hero.name}</h2>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getQualityColor(hero.quality)}`}>{hero.quality}</span>
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getTypeColor(hero.type)}`}>{hero.type}</span>
@@ -67,7 +68,7 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
           </div>
         </div>
 
-        <div className="p-5 overflow-y-auto flex-1 bg-bg-panel text-ink">
+        <div ref={scrollRef} className="p-5 overflow-y-auto flex-1 bg-bg-panel text-ink cursor-grab active:cursor-grabbing">
           <div className="flex justify-between items-center mb-6 p-4 bg-primary/60 border border-white/10 rounded-sm shadow-sm relative overflow-hidden">
             <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
               <Shield size={100} />
@@ -78,15 +79,15 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
               <div className="flex items-center gap-1 text-ink-light"><Sword size={12} /> <span className="text-[10px] font-bold">攻击</span></div>
-              <span className="font-mono font-bold text-ink text-sm">{hero.attack}</span>
+              <span className="font-mono font-bold text-ink text-sm">{heroState?.attack || hero.attack}</span>
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
               <div className="flex items-center gap-1 text-ink-light"><Zap size={12} /> <span className="text-[10px] font-bold">谋略</span></div>
-              <span className="font-mono font-bold text-ink text-sm">{hero.magic}</span>
+              <span className="font-mono font-bold text-ink text-sm">{heroState?.magic || hero.magic}</span>
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
               <div className="flex items-center gap-1 text-ink-light"><Shield size={12} /> <span className="text-[10px] font-bold">防御</span></div>
-              <span className="font-mono font-bold text-ink text-sm">{hero.defense}</span>
+              <span className="font-mono font-bold text-ink text-sm">{heroState?.defense || hero.defense}</span>
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
               <div className="flex items-center gap-1 text-ink-light"><Wind size={12} /> <span className="text-[10px] font-bold">攻速</span></div>

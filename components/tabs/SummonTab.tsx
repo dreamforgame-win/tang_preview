@@ -5,6 +5,7 @@ import { useState, useRef } from 'react';
 import { HERO_GALLERY, HeroDetail } from '@/data/heroes';
 import SummonResult from '@/components/SummonResult';
 import WelfareModal from '@/components/WelfareModal';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 export default function SummonTab() {
   const { coins, tokens, setTokens, setActiveTab, addHeroToRoster, pityCounter } = useGameState();
@@ -15,6 +16,7 @@ export default function SummonTab() {
   const [drawnHeroes, setDrawnHeroes] = useState<HeroDetail[]>([]);
   const [summonResults, setSummonResults] = useState<{ hero: HeroDetail, status: 'new' | 'converted' }[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const scrollRef = useDragScroll<HTMLDivElement>({ direction: 'vertical' });
 
   const handleSummon = (amount: number) => {
     if (tokens >= amount) {
@@ -118,7 +120,7 @@ export default function SummonTab() {
         <WelfareModal onClose={() => setShowWelfare(false)} onConfirm={handleWelfareConfirm} />
       )}
 
-      <div className="flex-1 overflow-y-auto flex flex-col pb-24 relative z-10">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col pb-24 relative z-10 cursor-grab active:cursor-grabbing">
         {/* Header */}
         <div className="sticky top-0 w-full z-20 flex justify-between items-center p-4 bg-gradient-to-b from-bg-dark/80 to-transparent">
         <div className="flex items-center gap-2">

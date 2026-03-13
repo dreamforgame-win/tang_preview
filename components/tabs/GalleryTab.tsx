@@ -2,9 +2,11 @@
 import HeroGallery from '@/components/HeroGallery';
 import { useGameState } from '@/components/GameStateProvider';
 import { ArrowLeft } from 'lucide-react';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 export default function GalleryTab() {
   const { setActiveTab } = useGameState();
+  const scrollRef = useDragScroll<HTMLDivElement>({ direction: 'vertical' });
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden bg-bg-panel bg-[url('https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/card_bg.jpg')] bg-cover bg-center">
@@ -14,7 +16,7 @@ export default function GalleryTab() {
         <h2 className="font-serif text-lg font-bold leading-tight uppercase tracking-widest text-ink">武将</h2>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-24 cursor-grab active:cursor-grabbing">
         <HeroGallery />
       </div>
 

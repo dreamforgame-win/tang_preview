@@ -3,6 +3,9 @@ import { useGameState, March } from '@/components/GameStateProvider';
 import { Sparkles, Users, BookOpen, Map as MapIcon, X, Home, Sword, Navigation, Settings } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { HERO_GALLERY } from '@/data/heroes';
+import BattleScreen from '@/components/BattleScreen';
+import { CombatHero } from '@/lib/battleEngine';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 type TileType = 'plains' | 'city' | 'mountain' | 'lake' | 'village' | 'forest' | 'iron' | 'town';
 
@@ -174,18 +177,25 @@ const getTileName = (type: TileType) => {
 };
 
 export default function BattleTab() {
-  const { setActiveTab, lineups, heroes, addMarch, removeMarch, marches, setCurrentLineupIndex, setLineupSubTab } = useGameState();
+  const { setActiveTab, lineups, heroes, addMarch, removeMarch, marches, setCurrentLineupIndex, setLineupSubTab, hasRedDot, resetGame } = useGameState();
   const [mapData, setMapData] = useState<TileData[]>(generateMap);
   const [selectedTile, setSelectedTile] = useState<TileData | null>(null);
   const [selectedMarchId, setSelectedMarchId] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   
   // March Selection State
   const [isMarchOpen, setIsMarchOpen] = useState(false);
+  const [marchType, setMarchType] = useState<'attack' | 'move'>('move');
   const [selectedLineupIdx, setSelectedLineupIdx] = useState(0);
   const [isViewLocked, setIsViewLocked] = useState(true);
   
   const [currentTime, setCurrentTime] = useState(0);
   
+  // Battle State
+  const [activeBattle, setActiveBattle] = useState<{ player: CombatHero[], enemy: CombatHero[] } | null>(null);
+  const marchScrollRef = useDragScroll<HTMLDivElement>({ direction: 'horizontal' });
+
   // Animation loop
   useEffect(() => {
     if (marches.length === 0) return;
@@ -197,6 +207,66 @@ export default function BattleTab() {
       // Check for arrived marches
       marches.forEach(m => {
         if (now - m.startTime >= m.duration && m.status === 'marching') {
+          if (m.type === 'attack') {
+            // Generate enemy lineup
+            const enemyLineup: CombatHero[] = [];
+            const availableHeroes = [...HERO_GALLERY].sort(() => Math.random() - 0.5);
+            const positions = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5);
+            
+            for (let i = 0; i < 3; i++) {
+              const h = availableHeroes[i];
+              enemyLineup.push({
+                id: h.id,
+                instanceId: `enemy-${i}`,
+                name: h.name,
+                avatar: h.avatar,
+                team: 'enemy',
+                position: positions[i],
+                max_hp: h.hp * 10,
+                hp: h.hp * 10,
+                atk: h.attack,
+                int_stat: h.magic,
+                def_stat: h.defense,
+                spd: h.speed,
+                energy: 0,
+                attack_cooldown: 0,
+                shield: 0,
+                buffs: []
+              });
+            }
+
+            // Generate player lineup
+            const playerLineup: CombatHero[] = [];
+            const lineup = lineups[m.lineupIndex];
+            lineup.forEach((heroId, idx) => {
+              if (heroId) {
+                const h = heroes.find(x => x.id === heroId);
+                const baseHero = HERO_GALLERY.find(x => x.id === heroId);
+                if (h && baseHero) {
+                  playerLineup.push({
+                    id: h.id,
+                    instanceId: `player-${idx}`,
+                    name: baseHero.name,
+                    avatar: baseHero.avatar,
+                    team: 'player',
+                    position: idx,
+                    max_hp: h.troops,
+                    hp: h.troops,
+                    atk: baseHero.attack,
+                    int_stat: baseHero.magic,
+                    def_stat: baseHero.defense,
+                    spd: baseHero.speed,
+                    energy: 0,
+                    attack_cooldown: 0,
+                    shield: 0,
+                    buffs: []
+                  });
+                }
+              }
+            });
+
+            setActiveBattle({ player: playerLineup, enemy: enemyLineup });
+          }
           removeMarch(m.id);
         }
       });
@@ -205,7 +275,7 @@ export default function BattleTab() {
     };
     frameId = requestAnimationFrame(update);
     return () => cancelAnimationFrame(frameId);
-  }, [marches, removeMarch]);
+  }, [marches, removeMarch, heroes, lineups]);
 
   // Viewport state
   const [zoom, setZoom] = useState(1);
@@ -369,7 +439,8 @@ export default function BattleTab() {
       to: { col: selectedTile.col, row: selectedTile.row },
       startTime: Date.now(),
       duration: dist * 5000, // 5 seconds per hex
-      status: 'marching'
+      status: 'marching',
+      type: marchType
     };
     addMarch(march);
     setIsMarchOpen(false);
@@ -438,15 +509,20 @@ export default function BattleTab() {
                   height={HEX_HEIGHT}
                   viewBox={`0 0 ${HEX_WIDTH} ${HEX_HEIGHT}`}
                   className="absolute inset-0 overflow-visible pointer-events-none"
-                  style={{ filter: isSelected ? 'drop-shadow(0 0 10px rgba(255,255,255,0.6))' : 'none' }}
                 >
                   <polygon
                     points="40,0 80,23 80,69 40,92 0,69 0,23"
-                    className={`pointer-events-auto cursor-pointer transition-all ${getTileColor(tile.type)} hover:brightness-110 ${isSelected ? 'brightness-125' : ''}`}
+                    className={`pointer-events-auto cursor-pointer transition-all ${getTileColor(tile.type)} hover:stroke-white hover:stroke-[3]`}
                     strokeWidth="2"
                     strokeLinejoin="round"
                     onClick={() => handleTileClick(tile)}
                   />
+                  {isSelected && (
+                    <polygon
+                      points="40,0 80,23 80,69 40,92 0,69 0,23"
+                      className="fill-white opacity-30 animate-breathing pointer-events-none"
+                    />
+                  )}
                 </svg>
 
                 <div 
@@ -604,13 +680,13 @@ export default function BattleTab() {
               </div>
               <div className="absolute left-[40px] top-1/2 -translate-y-1/2 ml-3 flex flex-col gap-2 pointer-events-auto">
                 <button 
-                  onClick={() => setIsMarchOpen(true)}
+                  onClick={() => { setMarchType('attack'); setIsMarchOpen(true); }}
                   className="bg-black/70 text-white px-4 py-1.5 rounded-sm text-xs font-bold hover:bg-black/90 active:scale-95 whitespace-nowrap border border-white/20 shadow-lg transition-transform"
                 >
                   攻占
                 </button>
                 <button 
-                  onClick={() => setIsMarchOpen(true)}
+                  onClick={() => { setMarchType('move'); setIsMarchOpen(true); }}
                   className="bg-black/70 text-white px-4 py-1.5 rounded-sm text-xs font-bold hover:bg-black/90 active:scale-95 whitespace-nowrap border border-white/20 shadow-lg transition-transform"
                 >
                   行军
@@ -644,12 +720,14 @@ export default function BattleTab() {
                   <span className="text-xs font-bold text-ink-light group-hover:text-ink transition-colors">锁定视角</span>
                 </label>
               </div>
-              <button onClick={() => setIsMarchOpen(false)} className="p-1 text-ink-light hover:text-ink">
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setIsMarchOpen(false)} className="p-1 text-ink-light hover:text-ink">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             
-            <div className="flex-1 overflow-x-auto p-4">
+            <div ref={marchScrollRef} className="flex-1 overflow-x-scroll show-scrollbar p-4 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-primary/20 [&::-webkit-scrollbar-thumb]:bg-accent [&::-webkit-scrollbar-thumb]:rounded-full cursor-grab active:cursor-grabbing">
               <div className="flex gap-3 h-full pb-2">
                 {lineups.map((lu, idx) => {
                   const firstHeroId = lu.find(id => id !== null);
@@ -666,7 +744,7 @@ export default function BattleTab() {
                       <button
                         onClick={() => !isEmpty && setSelectedLineupIdx(idx)}
                         disabled={isEmpty}
-                        className={`w-28 h-full rounded-lg border-2 transition-all relative overflow-hidden flex flex-col ${isSelected ? 'border-accent shadow-[0_0_15px_rgba(139,26,26,0.4)] scale-105 z-10' : 'border-white/10 bg-primary/20'} ${isEmpty ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                        className={`w-24 h-full rounded-lg border-2 transition-all relative overflow-hidden flex flex-col ${isSelected ? 'border-accent shadow-[0_0_15px_rgba(139,26,26,0.4)] scale-105 z-10' : 'border-white/10 bg-primary/20'} ${isEmpty ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                       >
                         {firstHero ? (
                           <>
@@ -727,7 +805,7 @@ export default function BattleTab() {
                 className="w-full bg-accent disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-serif font-bold text-lg py-3 rounded-sm shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <Sword size={20} />
-                出征
+                {marchType === 'attack' ? '出征' : '行军'}
               </button>
             </div>
           </div>
@@ -757,10 +835,11 @@ export default function BattleTab() {
         <div className="pointer-events-auto w-full flex gap-3 mt-2">
           <button 
             onClick={() => setActiveTab('gallery')}
-            className="flex-1 bg-primary/80 backdrop-blur-md border border-white/10 rounded-sm py-3 flex items-center justify-center gap-2 active:bg-white/5 transition-colors shadow-sm"
+            className="flex-1 bg-primary/80 backdrop-blur-md border border-white/10 rounded-sm py-3 flex items-center justify-center gap-2 active:bg-white/5 transition-colors shadow-sm relative"
           >
             <BookOpen size={18} className="text-ink" />
             <span className="font-serif font-bold text-ink tracking-widest text-sm">武将</span>
+            {hasRedDot && <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-sm border border-white/50"></div>}
           </button>
           <button 
             onClick={() => setActiveTab('lineup')}
@@ -771,6 +850,90 @@ export default function BattleTab() {
           </button>
         </div>
       </div>
+
+      {/* Battle Screen */}
+      {activeBattle && (
+        <BattleScreen 
+          playerLineup={activeBattle.player}
+          enemyLineup={activeBattle.enemy}
+          onClose={() => setActiveBattle(null)}
+          onVictory={() => {
+            // Handle victory logic here (e.g., occupy tile)
+          }}
+        />
+      )}
+
+      {/* Top Left Settings Button */}
+      <div className="absolute top-4 left-4 z-50">
+        <button 
+          onClick={() => setIsSettingsOpen(true)}
+          className="w-14 h-14 rounded-full bg-primary/90 text-ink flex flex-col items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.4)] active:scale-95 transition-transform border border-white/10"
+        >
+          <Settings size={20} className="mb-0.5" />
+          <span className="text-[10px] font-bold tracking-widest">设置</span>
+        </button>
+      </div>
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-bg-panel w-full max-w-sm rounded-xl border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-primary/50">
+              <h3 className="font-serif font-bold text-lg text-ink tracking-widest">设置</h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="p-1 text-ink-light hover:text-ink transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  setIsSettingsOpen(false);
+                  setIsResetConfirmOpen(true);
+                }}
+                className="w-full py-3 bg-red-900/40 hover:bg-red-900/60 border border-red-500/30 rounded-sm text-red-200 font-serif font-bold tracking-widest transition-colors"
+              >
+                清空存档
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-bg-panel w-full max-w-sm rounded-xl border border-red-500/30 shadow-[0_0_30px_rgba(220,38,38,0.3)] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center text-red-500 mb-2">
+                <Settings size={32} />
+              </div>
+              <h3 className="font-serif font-bold text-xl text-red-400 tracking-widest">警告：清空存档</h3>
+              <p className="text-ink-light text-sm leading-relaxed">
+                此操作将永久删除您所有的武将、阵容和游戏进度。<br/>
+                <span className="text-red-400 font-bold mt-2 block">此操作不可逆，是否继续？</span>
+              </p>
+              
+              <div className="flex gap-3 w-full mt-4">
+                <button 
+                  onClick={() => setIsResetConfirmOpen(false)}
+                  className="flex-1 py-3 bg-primary/80 border border-white/10 rounded-sm text-ink font-serif font-bold hover:bg-white/10 transition-colors"
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={() => {
+                    resetGame();
+                    setIsResetConfirmOpen(false);
+                  }}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-500 rounded-sm text-white font-serif font-bold shadow-lg transition-colors"
+                >
+                  确认清空
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

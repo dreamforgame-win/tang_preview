@@ -1,8 +1,11 @@
 'use client';
 import { useGameState } from '@/components/GameStateProvider';
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Filter, X, ChevronUp, Shield, Sword, Zap, Heart, Wind } from 'lucide-react';
+import { ArrowLeft, Filter, X, ChevronUp, Shield, Sword, Zap, Heart, Wind, Star } from 'lucide-react';
+import FormationModal from '@/components/FormationModal';
 import { HERO_GALLERY, HeroQuality, HeroType, HeroRole, HeroDetail } from '@/data/heroes';
+import { formations } from '@/data/formations';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 type Hero = {
   id: string;
@@ -77,7 +80,7 @@ const EmptyRow = () => (
 );
 
 export default function LineupTab() {
-  const { heroes, lineups, lineup, currentLineupIndex, setCurrentLineupIndex, updateHeroTroops, quickAssign, setActiveTab, setFullLineup, addHeroToRoster, lineupSubTab, setLineupSubTab } = useGameState();
+  const { heroes, lineups, lineup, currentLineupIndex, setCurrentLineupIndex, updateHeroTroops, quickAssign, setActiveTab, setFullLineup, addHeroToRoster, lineupSubTab, setLineupSubTab, formationId } = useGameState();
   
   // Filtering state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -94,9 +97,17 @@ export default function LineupTab() {
 
   // Hero Info Modal state
   const [selectedHeroInfo, setSelectedHeroInfo] = useState<HeroDetail | null>(null);
+  const [selectedEffectCell, setSelectedEffectCell] = useState<number | null>(null);
+  const selectedFormation = formations.find(f => f.id === formationId);
 
   // View Angle state
   const [viewAngle, setViewAngle] = useState(45);
+  const [isFormationModalOpen, setIsFormationModalOpen] = useState(false);
+
+  // Drag Scroll refs
+  const heroListScrollRef = useDragScroll<HTMLDivElement>({ direction: 'horizontal' });
+  const lineupSelectScrollRef = useDragScroll<HTMLDivElement>({ direction: 'horizontal' });
+  const filterScrollRef = useDragScroll<HTMLDivElement>({ direction: 'vertical' });
 
   // Image Loading state
   const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
@@ -122,95 +133,116 @@ export default function LineupTab() {
     return () => { document.body.style.overflow = ''; };
   }, [touchDragState]);
 
-  const handleTouchStart = (e: React.TouchEvent, heroId: string, sourceIndex?: number) => {
-    draggedRef.current = false;
-    const touch = e.touches[0];
-    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+  const handlePointerDown = (e: React.PointerEvent, heroId: string, sourceIndex?: number) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // Only left click
+    
     const heroData = HERO_GALLERY.find(h => h.id === heroId);
     if (!heroData) return;
-    
-    const timer = setTimeout(() => {
-      draggedRef.current = true;
-      setTouchDragState({
-        heroId,
-        sourceIndex,
-        x: touch.clientX,
-        y: touch.clientY,
-        heroData
-      });
-      setIsDragging(true);
-      if (window.navigator && window.navigator.vibrate) {
-        window.navigator.vibrate(50);
-      }
-    }, 200);
-    setPressTimer(timer);
-  };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchDragState) {
-      const touch = e.touches[0];
-      setTouchDragState(prev => prev ? { ...prev, x: touch.clientX, y: touch.clientY } : null);
-      
-      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-      const cell = elem?.closest('[data-cell-index]');
-      if (cell) {
-        setHoveredCell(parseInt(cell.getAttribute('data-cell-index')!));
-      } else {
-        setHoveredCell(null);
-      }
-    } else if (pressTimer && touchStartPosRef.current) {
-      const touch = e.touches[0];
-      const dx = touch.clientX - touchStartPosRef.current.x;
-      const dy = touch.clientY - touchStartPosRef.current.y;
-      if (Math.sqrt(dx*dx + dy*dy) > 10) {
-        clearTimeout(pressTimer);
-        setPressTimer(null);
-      }
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (pressTimer) {
-      clearTimeout(pressTimer);
-      setPressTimer(null);
-    }
-    
-    if (!touchDragState) return;
-    
-    const touch = e.changedTouches[0];
-    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-    const cell = elem?.closest('[data-cell-index]');
-    
-    if (cell) {
-      const targetIndex = parseInt(cell.getAttribute('data-cell-index')!);
-      handleDrop(targetIndex, touchDragState.heroId, touchDragState.sourceIndex);
-    } else {
-      const removeZone = elem?.closest('[data-drop-zone="remove"]');
-      if (removeZone && touchDragState.sourceIndex !== undefined) {
-        const newLineup = [...lineup];
-        newLineup[touchDragState.sourceIndex] = null;
-        setFullLineup(newLineup);
-      }
-    }
-    
-    setTouchDragState(null);
-    setHoveredCell(null);
-    setIsDragging(false);
-    
-    setTimeout(() => {
-      draggedRef.current = false;
-    }, 100);
-  };
-
-  const handleTouchCancel = () => {
-    if (pressTimer) {
-      clearTimeout(pressTimer);
-      setPressTimer(null);
-    }
-    setTouchDragState(null);
-    setHoveredCell(null);
-    setIsDragging(false);
     draggedRef.current = false;
+    touchStartPosRef.current = { x: e.clientX, y: e.clientY };
+    
+    let isDragStarted = false;
+    let timer: NodeJS.Timeout | null = null;
+    
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      if (!touchStartPosRef.current) return;
+      
+      const dx = moveEvent.clientX - touchStartPosRef.current.x;
+      const dy = moveEvent.clientY - touchStartPosRef.current.y;
+      
+      if (!isDragStarted) {
+        // If moving up (dy < -10) and mostly vertical
+        if (dy < -10 && Math.abs(dy) > Math.abs(dx)) {
+          isDragStarted = true;
+          draggedRef.current = true;
+          if (timer) clearTimeout(timer);
+          
+          setTouchDragState({
+            heroId,
+            sourceIndex,
+            x: moveEvent.clientX,
+            y: moveEvent.clientY,
+            heroData
+          });
+          setIsDragging(true);
+          if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(50);
+          }
+        } else if (Math.abs(dx) > 10 || dy > 10) {
+          // Moving horizontally or downwards, cancel drag intent
+          cleanup();
+        }
+      } else {
+        // Update drag position
+        setTouchDragState(prev => prev ? { ...prev, x: moveEvent.clientX, y: moveEvent.clientY } : null);
+        const elem = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        const cell = elem?.closest('[data-cell-index]');
+        if (cell) {
+          setHoveredCell(parseInt(cell.getAttribute('data-cell-index')!));
+        } else {
+          setHoveredCell(null);
+        }
+      }
+    };
+    
+    const onPointerUp = (upEvent: PointerEvent) => {
+      if (isDragStarted) {
+        const elem = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
+        const cell = elem?.closest('[data-cell-index]');
+        
+        if (cell) {
+          const targetIndex = parseInt(cell.getAttribute('data-cell-index')!);
+          handleDrop(targetIndex, heroId, sourceIndex);
+        } else {
+          const removeZone = elem?.closest('[data-drop-zone="remove"]');
+          if (removeZone && sourceIndex !== undefined) {
+            const newLineup = [...lineup];
+            newLineup[sourceIndex] = null;
+            setFullLineup(newLineup);
+          }
+        }
+        
+        setTouchDragState(null);
+        setHoveredCell(null);
+        setIsDragging(false);
+        
+        setTimeout(() => {
+          draggedRef.current = false;
+        }, 100);
+      }
+      cleanup();
+    };
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', cleanup);
+    };
+
+    // Long press fallback
+    timer = setTimeout(() => {
+      if (!isDragStarted) {
+        isDragStarted = true;
+        draggedRef.current = true;
+        setTouchDragState({
+          heroId,
+          sourceIndex,
+          x: touchStartPosRef.current!.x,
+          y: touchStartPosRef.current!.y,
+          heroData
+        });
+        setIsDragging(true);
+        if (window.navigator && window.navigator.vibrate) {
+          window.navigator.vibrate(50);
+        }
+      }
+    }, 300);
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', cleanup);
   };
 
   // Calculate troops based on current lineup
@@ -311,14 +343,11 @@ export default function LineupTab() {
     addHeroToRoster(heroId);
   };
 
-  const lineupNames = ['一', '二', '三', '四', '五'];
+  const lineupNames = ['阵容一', '阵容二', '阵容三', '阵容四', '阵容五'];
 
   return (
     <div 
       className="flex-1 flex flex-col relative overflow-hidden bg-bg-panel bg-[url('https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/team_bg.jpg')] bg-cover bg-center"
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchCancel}
     >
       <div className="absolute inset-0 bg-bg-dark/60 backdrop-blur-[2px] pointer-events-none z-0"></div>
       {/* Header */}
@@ -326,20 +355,23 @@ export default function LineupTab() {
         <h2 className="font-serif text-lg font-bold leading-tight uppercase tracking-widest text-ink">编队</h2>
       </header>
 
-      <div className="flex-1 overflow-y-auto flex flex-col pb-24">
+      <div className="flex-1 overflow-y-auto flex flex-col pb-24" onClick={() => setSelectedEffectCell(null)}>
         {/* 3D Grid Section */}
         <section className="w-full h-80 shrink-0 flex items-center justify-center relative overflow-hidden border-b border-ink/5 z-10">
           <div style={{ perspective: '1000px' }} className="w-full h-full flex items-center justify-center">
             <div 
               style={{ transform: `rotateX(${viewAngle}deg) translateY(-10px)`, transformStyle: 'preserve-3d' }} 
               className="grid grid-cols-3 gap-3"
+              onClick={(e) => e.stopPropagation()}
             >
               {lineup.map((heroId, index) => {
                 const heroData = heroId ? HERO_GALLERY.find(h => h.id === heroId) : null;
+                const isEffectCell = selectedFormation?.effectCells.includes(index);
                 return (
                   <div 
                     key={index}
                     data-cell-index={index}
+                    onClick={() => isEffectCell ? setSelectedEffectCell(selectedEffectCell === index ? null : index) : setSelectedEffectCell(null)}
                     onDragOver={(e) => { e.preventDefault(); setHoveredCell(index); }}
                     onDragLeave={() => setHoveredCell(null)}
                     onDrop={(e) => {
@@ -352,18 +384,16 @@ export default function LineupTab() {
                       setIsDragging(false);
                     }}
                     style={{ transformStyle: 'preserve-3d' }}
-                    className={`w-[95px] h-[95px] border-[1.5px] transition-colors relative ${hoveredCell === index ? 'bg-accent/30 border-accent' : 'bg-ink/5 border-ink/40'}`}
+                    className={`w-[95px] h-[95px] border-[1.5px] transition-colors relative ${hoveredCell === index ? 'bg-accent/30 border-accent' : isEffectCell ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-ink/5 border-ink/40'}`}
                   >
+                    {isEffectCell && selectedEffectCell === index && (
+                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white text-[10px] p-2 rounded shadow-lg w-32 whitespace-normal">
+                        {selectedFormation?.effects[selectedFormation.effectCells.indexOf(index)]}
+                      </div>
+                    )}
                     {heroData && (
                       <div 
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('heroId', heroData.id);
-                          e.dataTransfer.setData('sourceIndex', index.toString());
-                          setTimeout(() => setIsDragging(true), 0);
-                        }}
-                        onDragEnd={() => setIsDragging(false)}
-                        onTouchStart={(e) => handleTouchStart(e, heroData.id, index)}
+                        onPointerDown={(e) => handlePointerDown(e, heroData.id, index)}
                         style={{ transform: `rotateX(-${viewAngle}deg) translateY(-6px)`, transformOrigin: 'bottom center', WebkitTouchCallout: 'none' }}
                         className={`absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center justify-end cursor-grab active:cursor-grabbing transition-opacity w-24 z-20 select-none ${isDragging ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
                       >
@@ -410,7 +440,15 @@ export default function LineupTab() {
             className="flex-1 h-2 bg-white rounded-lg appearance-none cursor-pointer border border-ink/10 shadow-inner [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md"
           />
           <span>完全俯视</span>
+          <button 
+            onClick={() => setIsFormationModalOpen(true)}
+            className="px-3 py-1 bg-accent text-white rounded-md text-xs font-bold shadow-md hover:bg-accent/90"
+          >
+            阵法：{formations.find(f => f.id === formationId)?.name.replace(/[【】]/g, '') || '无'}
+          </button>
         </div>
+
+        {isFormationModalOpen && <FormationModal onClose={() => setIsFormationModalOpen(false)} />}
 
         {/* Tabs */}
         <nav className="flex border-b border-ink/10 bg-bg-panel/80 backdrop-blur-md sticky top-0 z-40 shrink-0">
@@ -488,7 +526,10 @@ export default function LineupTab() {
               }}
             >
               {/* Horizontal Scroll List */}
-              <div className="w-full overflow-x-auto pb-4 show-scrollbar">
+              <div 
+                ref={heroListScrollRef}
+                className="w-full overflow-x-scroll show-scrollbar pb-4 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-primary/20 [&::-webkit-scrollbar-thumb]:bg-accent [&::-webkit-scrollbar-thumb]:rounded-full cursor-grab active:cursor-grabbing"
+              >
                 <div className="flex gap-3 w-max px-1">
                   {sortedFilteredHeroes.map(hero => {
                     const heroLineups = getHeroLineups(hero.id);
@@ -497,19 +538,9 @@ export default function LineupTab() {
                     return (
                     <div 
                       key={hero.id} 
-                      draggable
-                      onDragStart={(e) => {
-                        if (heroState?.locked) {
-                          e.preventDefault();
-                          return;
-                        }
-                        e.dataTransfer.setData('heroId', hero.id);
-                        setTimeout(() => setIsDragging(true), 0);
-                      }}
-                      onDragEnd={() => setIsDragging(false)}
-                      onTouchStart={(e) => {
+                      onPointerDown={(e) => {
                         if (heroState?.locked) return;
-                        handleTouchStart(e, hero.id);
+                        handlePointerDown(e, hero.id);
                       }}
                       className="flex flex-col items-center cursor-pointer group shrink-0 relative select-none"
                       style={{ WebkitTouchCallout: 'none' }}
@@ -531,6 +562,13 @@ export default function LineupTab() {
                           </div>
                         )}
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                          {heroState && heroState.starLevel > 0 && (
+                            <div className="flex justify-center mb-0.5">
+                              {[1, 2, 3, 4, 5].slice(0, heroState.starLevel).map(i => (
+                                <Star key={i} size={8} className="text-yellow-400 fill-yellow-400" />
+                              ))}
+                            </div>
+                          )}
                           <div className="flex items-center justify-center gap-1 w-full">
                             <span className="text-[8px] font-bold px-1 rounded-sm bg-black/60 text-white whitespace-nowrap">{hero.type[0]}</span>
                             <span className="text-[10px] font-serif font-bold text-white truncate drop-shadow-md">{hero.name}</span>
@@ -584,36 +622,28 @@ export default function LineupTab() {
       <div className="absolute bottom-0 left-0 w-full h-16 bg-bg-panel/95 backdrop-blur-md border-t border-white/10 flex items-center px-4 z-50 gap-3">
         <button 
           onClick={() => setActiveTab('battle')}
-          className="w-10 h-10 rounded-full bg-primary/80 border border-white/10 flex items-center justify-center shadow-sm active:scale-95 transition-transform text-ink"
+          className="w-10 h-10 rounded-full bg-primary/80 border border-white/10 flex items-center justify-center shadow-sm active:scale-95 transition-transform text-ink shrink-0 mr-2"
         >
           <ArrowLeft size={20} />
         </button>
 
-        <div className="relative">
-          <button 
-            onClick={() => setIsLineupMenuOpen(!isLineupMenuOpen)}
-            className="h-10 px-4 rounded-full bg-primary/80 border border-white/10 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform text-ink"
-          >
-            <span className="font-serif font-bold text-sm tracking-widest">阵容{lineupNames[currentLineupIndex]}</span>
-            <ChevronUp size={16} className={`transition-transform duration-200 ${isLineupMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isLineupMenuOpen && (
-            <div className="absolute bottom-full left-0 mb-3 w-28 bg-bg-panel border border-ink/20 rounded-sm shadow-xl overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-2">
-              {[0, 1, 2, 3, 4].map(idx => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setCurrentLineupIndex(idx);
-                    setIsLineupMenuOpen(false);
-                  }}
-                  className={`py-3 text-sm font-serif font-bold transition-colors border-b border-ink/5 last:border-0 ${currentLineupIndex === idx ? 'bg-white/20 text-white' : 'text-ink hover:bg-ink/5'}`}
-                >
-                  阵容{lineupNames[idx]}
-                </button>
-              ))}
-            </div>
-          )}
+        <div 
+          ref={lineupSelectScrollRef}
+          className="flex-1 flex gap-1 h-10 overflow-x-scroll show-scrollbar [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-primary/20 [&::-webkit-scrollbar-thumb]:bg-accent [&::-webkit-scrollbar-thumb]:rounded-full pb-1 cursor-grab active:cursor-grabbing"
+        >
+          {[0, 1, 2, 3, 4].map(idx => (
+            <button
+              key={idx}
+              onClick={() => setCurrentLineupIndex(idx)}
+              className={`px-3 rounded-sm border flex items-center justify-center shadow-sm active:scale-95 transition-all whitespace-nowrap shrink-0 ${
+                currentLineupIndex === idx 
+                  ? 'bg-accent text-white border-accent' 
+                  : 'bg-primary/80 border-white/10 text-ink hover:bg-white/20'
+              }`}
+            >
+              <span className="font-serif font-bold text-xs tracking-widest">{lineupNames[idx]}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -628,7 +658,10 @@ export default function LineupTab() {
               </button>
             </div>
             
-            <div className="p-4 overflow-y-auto space-y-6">
+            <div 
+              ref={filterScrollRef}
+              className="p-4 overflow-y-auto space-y-6 cursor-grab active:cursor-grabbing"
+            >
               {/* Rarity */}
               <div>
                 <h4 className="text-xs font-bold text-ink-light mb-3 uppercase tracking-widest">稀有度</h4>

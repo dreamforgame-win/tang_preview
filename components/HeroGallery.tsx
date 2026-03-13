@@ -7,7 +7,7 @@ import { Star } from 'lucide-react';
 
 export default function HeroGallery() {
   const [selectedHero, setSelectedHero] = useState<HeroDetail | null>(null);
-  const { heroes } = useGameState();
+  const { heroes, markHeroAsSeen } = useGameState();
 
   const getTypeColor = (type: string) => {
     switch(type) {
@@ -34,17 +34,37 @@ export default function HeroGallery() {
     <div className="p-4 pb-32">
       {/* Grid of Heroes */}
       <div className="grid grid-cols-4 gap-x-2 gap-y-4">
-        {HERO_GALLERY.map(hero => {
+        {[...HERO_GALLERY].sort((a, b) => {
+          const aLocked = heroes.find(h => h.id === a.id)?.locked;
+          const bLocked = heroes.find(h => h.id === b.id)?.locked;
+          if (aLocked && !bLocked) return 1;
+          if (!aLocked && bLocked) return -1;
+          return 0;
+        }).map(hero => {
           const heroState = heroes.find(h => h.id === hero.id);
           const starLevel = heroState?.starLevel || 0;
+          const isNew = heroState?.isNew;
+          const canUpgrade = !heroState?.locked && heroState && heroState.starLevel < 5 && heroState.shards >= (heroState.starLevel < 3 ? 1 : 2);
+          
           return (
             <div 
               key={hero.id} 
-              onClick={() => setSelectedHero(hero)}
-              className="flex flex-col items-center cursor-pointer group"
+              onClick={() => {
+                setSelectedHero(hero);
+                if (isNew) markHeroAsSeen(hero.id);
+              }}
+              className="flex flex-col items-center cursor-pointer group relative"
             >
               <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
                    style={{ backgroundImage: `url(${hero.avatar})` }}>
+                {isNew && (
+                  <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-bl-md z-30 shadow-md">
+                    新
+                  </div>
+                )}
+                {canUpgrade && !isNew && (
+                  <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-30 shadow-sm border border-white/50 animate-pulse"></div>
+                )}
                 {heroState?.locked && (
                   <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
                     <div className="text-white">
@@ -53,19 +73,19 @@ export default function HeroGallery() {
                   </div>
                 )}
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                  {starLevel > 0 && (
+                    <div className="flex justify-center mb-0.5">
+                      {[1, 2, 3, 4, 5].slice(0, starLevel).map(i => (
+                        <Star key={i} size={8} className="text-yellow-400 fill-yellow-400" />
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-center justify-center gap-1 w-full">
                     <span className="text-[9px] font-bold px-1 rounded-sm bg-black/60 text-white whitespace-nowrap">{hero.type[0]}</span>
                     <span className="text-xs font-serif font-bold text-white truncate drop-shadow-md">{hero.name}</span>
                   </div>
                 </div>
               </div>
-              {starLevel > 0 && (
-                <div className="flex mt-1">
-                  {[1, 2, 3, 4, 5].slice(0, starLevel).map(i => (
-                    <Star key={i} size={10} className="text-yellow-400 fill-yellow-400" />
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}

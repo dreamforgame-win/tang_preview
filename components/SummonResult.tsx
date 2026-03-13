@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { HeroDetail } from '@/data/heroes';
 import HeroDetailModal from './HeroDetailModal';
+import { useGameState } from './GameStateProvider';
+import { Star } from 'lucide-react';
 
 interface SummonResultProps {
   results: { hero: HeroDetail, status: 'new' | 'converted' }[];
@@ -10,6 +12,7 @@ interface SummonResultProps {
 export default function SummonResult({ results, onClose }: SummonResultProps) {
   const [canClose, setCanClose] = useState(false);
   const [selectedHero, setSelectedHero] = useState<HeroDetail | null>(null);
+  const { heroes } = useGameState();
 
   useEffect(() => {
     const timer = setTimeout(() => setCanClose(true), 500);
@@ -41,25 +44,33 @@ export default function SummonResult({ results, onClose }: SummonResultProps) {
       
       <div className="flex flex-col items-center gap-4 mb-4">
         <div className="grid grid-cols-3 gap-4 max-w-[300px]">
-          {results.map((item, i) => (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(item.hero.quality)} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm relative cursor-pointer`} onClick={() => setSelectedHero(item.hero)}>
-                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.hero.avatar})` }}></div>
-                {item.status === 'new' && (
-                  <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-bold px-1 rounded-bl-sm">新</div>
-                )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
-                  <div className="flex items-center justify-center gap-1 w-full">
-                    <span className="text-[9px] font-bold px-1 rounded-sm bg-black/60 text-white whitespace-nowrap">{item.hero.type[0]}</span>
-                    <span className="text-xs font-serif font-bold text-white truncate drop-shadow-md">{item.hero.name}</span>
+          {results.map((item, i) => {
+            const heroState = heroes.find(h => h.id === item.hero.id);
+            const starLevel = heroState?.starLevel || 0;
+            return (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(item.hero.quality)} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm relative cursor-pointer`} onClick={() => setSelectedHero(item.hero)}>
+                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.hero.avatar})` }}></div>
+                  {item.status === 'new' && (
+                    <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-bold px-1 rounded-bl-sm z-30">新</div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                    {starLevel > 0 && (
+                      <div className="flex justify-center mb-0.5">
+                        {[1, 2, 3, 4, 5].slice(0, starLevel).map(i => (
+                          <Star key={i} size={8} className="text-yellow-400 fill-yellow-400" />
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-center gap-1 w-full">
+                      <span className="text-[9px] font-bold px-1 rounded-sm bg-black/60 text-white whitespace-nowrap">{item.hero.type[0]}</span>
+                      <span className="text-xs font-serif font-bold text-white truncate drop-shadow-md">{item.hero.name}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              {item.status === 'converted' && (
-                <span className="text-[10px] text-amber-400 font-bold">已转化为将魂</span>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       <p className="text-ink-light text-xs mt-8">点击任意位置退出</p>
