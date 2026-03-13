@@ -388,7 +388,12 @@ export default function LineupTab() {
                   >
                     {isEffectCell && selectedEffectCell === index && (
                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white text-[10px] p-2 rounded shadow-lg w-32 whitespace-normal">
-                        {selectedFormation?.effects[selectedFormation.effectCells.indexOf(index)]}
+                        {(() => {
+                          const effect = selectedFormation?.effects[selectedFormation.effectCells.indexOf(index)];
+                          if (!effect) return '';
+                          const parts = effect.split(/[:：]/);
+                          return parts.length > 1 ? parts[1].trim() : parts[0].trim();
+                        })()}
                       </div>
                     )}
                     {heroData && (
