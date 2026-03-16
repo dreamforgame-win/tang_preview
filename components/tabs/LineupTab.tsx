@@ -875,6 +875,7 @@ export default function LineupTab() {
               {lineup.map((heroId, index) => {
                 const heroData = heroId ? HERO_GALLERY.find(h => h.id === heroId) : null;
                 const isEffectCell = selectedFormation?.effectCells.includes(index);
+                const incomingBuffsCount = talismanConnections.filter(c => c.target === index && c.source !== index).length;
                 return (
                   <div 
                     key={index}
@@ -916,6 +917,13 @@ export default function LineupTab() {
                         })()}
                         {talismanEffects[index] && talismanEffects[index].map((eff, i) => (
                           <div key={i} className="text-green-400">{eff}</div>
+                        ))}
+                      </div>
+                    )}
+                    {incomingBuffsCount > 0 && (
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1 z-30 pointer-events-none">
+                        {Array.from({ length: incomingBuffsCount }).map((_, i) => (
+                          <div key={i} className="w-[5px] h-[5px] rounded-full bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" />
                         ))}
                       </div>
                     )}
