@@ -98,6 +98,8 @@ export default function SummonTab() {
           ref={videoRef}
           className="w-full h-full object-cover"
           src="https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/video/card.mp4"
+          playsInline
+          webkit-playsinline="true"
           onEnded={() => {
             const container = document.getElementById('video-container');
             if (container) container.style.display = 'none';
