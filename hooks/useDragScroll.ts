@@ -14,7 +14,7 @@ export function useDragScroll<T extends HTMLElement>(options?: { direction?: 'ho
     let scrollTop = 0;
     let isDragging = false;
 
-    const onMouseDown = (e: MouseEvent) => {
+    const onPointerDown = (e: PointerEvent) => {
       isDown = true;
       isDragging = false;
       slider.classList.add('active');
@@ -24,17 +24,17 @@ export function useDragScroll<T extends HTMLElement>(options?: { direction?: 'ho
       scrollTop = slider.scrollTop;
     };
 
-    const onMouseLeave = () => {
+    const onPointerLeave = (e: PointerEvent) => {
       isDown = false;
       slider.classList.remove('active');
     };
 
-    const onMouseUp = (e: MouseEvent) => {
+    const onPointerUp = (e: PointerEvent) => {
       isDown = false;
       slider.classList.remove('active');
     };
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       if (!isDown) return;
       
       const x = e.pageX - slider.offsetLeft;
@@ -57,7 +57,7 @@ export function useDragScroll<T extends HTMLElement>(options?: { direction?: 'ho
       }
 
       if (isDragging) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         if (options?.direction !== 'vertical') {
           slider.scrollLeft = scrollLeft - walkX;
         }
@@ -74,17 +74,17 @@ export function useDragScroll<T extends HTMLElement>(options?: { direction?: 'ho
       }
     };
 
-    slider.addEventListener('mousedown', onMouseDown);
-    slider.addEventListener('mouseleave', onMouseLeave);
-    slider.addEventListener('mouseup', onMouseUp);
-    slider.addEventListener('mousemove', onMouseMove);
+    slider.addEventListener('pointerdown', onPointerDown);
+    slider.addEventListener('pointerleave', onPointerLeave);
+    slider.addEventListener('pointerup', onPointerUp);
+    slider.addEventListener('pointermove', onPointerMove, { passive: false });
     slider.addEventListener('click', onClick, true); // Capture phase to prevent child clicks
 
     return () => {
-      slider.removeEventListener('mousedown', onMouseDown);
-      slider.removeEventListener('mouseleave', onMouseLeave);
-      slider.removeEventListener('mouseup', onMouseUp);
-      slider.removeEventListener('mousemove', onMouseMove);
+      slider.removeEventListener('pointerdown', onPointerDown);
+      slider.removeEventListener('pointerleave', onPointerLeave);
+      slider.removeEventListener('pointerup', onPointerUp);
+      slider.removeEventListener('pointermove', onPointerMove);
       slider.removeEventListener('click', onClick, true);
     };
   }, [options?.direction]);

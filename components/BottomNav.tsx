@@ -1,6 +1,6 @@
 'use client';
 import { useGameState } from '@/components/GameStateProvider';
-import { Sparkles, Users, Swords, BookOpen } from 'lucide-react';
+import { Sparkles, Users, Swords, BookOpen, Hexagon } from 'lucide-react';
 
 export default function BottomNav() {
   const { activeTab, setActiveTab } = useGameState();
@@ -20,6 +20,13 @@ export default function BottomNav() {
             <BookOpen size={24} />
           </div>
           <p className="font-serif text-[10px] font-bold leading-normal tracking-widest relative z-10">图鉴</p>
+        </button>
+        <button onClick={() => setActiveTab('talisman')} className={`flex flex-1 flex-col items-center justify-center gap-1 ${activeTab === 'talisman' ? 'text-accent' : 'text-ink-light hover:text-ink'} transition-colors relative overflow-hidden`}>
+          {activeTab === 'talisman' && <div className="absolute inset-0 ink-splash opacity-60 pointer-events-none"></div>}
+          <div className="flex h-8 items-center justify-center relative z-10">
+            <Hexagon size={24} />
+          </div>
+          <p className="font-serif text-[10px] font-bold leading-normal tracking-widest relative z-10">阵符</p>
         </button>
         <button onClick={() => setActiveTab('lineup')} className={`flex flex-1 flex-col items-center justify-center gap-1 ${activeTab === 'lineup' ? 'text-accent' : 'text-ink-light hover:text-ink'} transition-colors relative overflow-hidden`}>
           {activeTab === 'lineup' && <div className="absolute inset-0 ink-splash opacity-60 pointer-events-none"></div>}

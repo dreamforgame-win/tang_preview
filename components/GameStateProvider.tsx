@@ -17,7 +17,7 @@ type Hero = {
   isNew?: boolean;
 };
 
-export type TabType = 'summon' | 'gallery' | 'lineup' | 'battle';
+export type TabType = 'summon' | 'gallery' | 'talisman' | 'lineup' | 'battle';
 export type LineupSubTabType = 'troops' | 'heroes' | 'runes';
 
 export type March = {
@@ -43,6 +43,10 @@ type GameState = {
   lineup: (string | null)[];
   formationId: number;
   setFormationId: (id: number) => void;
+  talismans: Record<number, number>;
+  lineupTalismans: (number | null)[][];
+  currentLineupTalismans: (number | null)[];
+  setFullLineupTalismans: (newTalismans: (number | null)[]) => void;
   lineupSubTab: LineupSubTabType;
   setLineupSubTab: (tab: LineupSubTabType) => void;
   setCoins: (val: number) => void;
@@ -88,12 +92,27 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const [lineups, setLineups] = useState<(string | null)[][]>(
     Array.from({ length: 5 }, () => Array(9).fill(null))
   );
+  const [lineupTalismans, setLineupTalismans] = useState<(number | null)[][]>(
+    Array.from({ length: 5 }, () => Array(9).fill(null))
+  );
+  const [talismans, setTalismans] = useState<Record<number, number>>({
+    1001: 1, 1002: 1, 1003: 1, 1004: 1, 1005: 1, 1006: 1, 1007: 1, 1008: 1, 1009: 1, 1010: 1,
+    2001: 1, 2002: 1, 2003: 1, 2004: 1, 2005: 1, 2006: 1, 2007: 1, 2008: 1, 2009: 1, 2010: 1,
+    3001: 1, 3002: 1, 3003: 1, 3004: 1, 3005: 1, 3006: 1, 3007: 1, 3008: 1, 3009: 1, 3010: 1
+  });
   const [formationId, setFormationId] = useState(0);
   const [currentLineupIndex, setCurrentLineupIndex] = useState(0);
   const [lineupSubTab, setLineupSubTab] = useState<LineupSubTabType>('troops');
   const [marches, setMarches] = useState<March[]>([]);
   
   const lineup = lineups[currentLineupIndex];
+  const currentLineupTalismans = lineupTalismans[currentLineupIndex];
+
+  const setFullLineupTalismans = (newTalismans: (number | null)[]) => {
+    const newLineupTalismans = [...lineupTalismans];
+    newLineupTalismans[currentLineupIndex] = newTalismans;
+    setLineupTalismans(newLineupTalismans);
+  };
 
   // Load state from localStorage
   React.useEffect(() => {
@@ -122,6 +141,8 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
           }));
         }
         if (data.lineups) setLineups(data.lineups);
+        if (data.lineupTalismans) setLineupTalismans(data.lineupTalismans);
+        if (data.talismans) setTalismans(data.talismans);
         if (data.formationId !== undefined) setFormationId(data.formationId);
         if (data.coins !== undefined) setCoins(data.coins);
         if (data.tokens !== undefined) setTokens(data.tokens);
@@ -139,13 +160,15 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('slg_save_v1', JSON.stringify({
         heroes,
         lineups,
+        lineupTalismans,
+        talismans,
         formationId,
         coins,
         tokens,
         pityCounter
       }));
     }
-  }, [heroes, lineups, formationId, coins, tokens, pityCounter, isLoaded]);
+  }, [heroes, lineups, lineupTalismans, talismans, formationId, coins, tokens, pityCounter, isLoaded]);
 
   const hasRedDot = React.useMemo(() => {
     return heroes.some(h => !h.locked && (h.isNew || (h.starLevel < 5 && h.shards >= (h.starLevel < 3 ? 1 : 2))));
@@ -253,6 +276,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       activeTab, setActiveTab, coins, tokens, heroes, 
       lineups, currentLineupIndex, setCurrentLineupIndex, lineup, 
       formationId, setFormationId,
+      talismans, lineupTalismans, currentLineupTalismans, setFullLineupTalismans,
       lineupSubTab, setLineupSubTab,
       setCoins, setTokens, updateHeroTroops, quickAssign, setLineupSlot, setFullLineup, addHeroToRoster, ascendHero, markHeroAsSeen, pityCounter,
       marches, addMarch, removeMarch, hasRedDot, resetGame

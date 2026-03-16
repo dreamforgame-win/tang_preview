@@ -4,6 +4,7 @@ import { useGameState } from '@/components/GameStateProvider';
 import SummonTab from '@/components/tabs/SummonTab';
 import GalleryTab from '@/components/tabs/GalleryTab';
 import LineupTab from '@/components/tabs/LineupTab';
+import TalismanTab from '@/components/tabs/TalismanTab';
 import BattleTab from '@/components/tabs/BattleTab';
 import LoadingScreen from '@/components/LoadingScreen';
 
@@ -22,6 +23,9 @@ export default function App() {
       </div>
       <div className={activeTab === 'gallery' ? 'flex-1 flex flex-col overflow-hidden' : 'hidden'}>
         <GalleryTab />
+      </div>
+      <div className={activeTab === 'talisman' ? 'flex-1 flex flex-col overflow-hidden' : 'hidden'}>
+        <TalismanTab />
       </div>
       <div className={activeTab === 'lineup' ? 'flex-1 flex flex-col overflow-hidden' : 'hidden'}>
         <LineupTab />

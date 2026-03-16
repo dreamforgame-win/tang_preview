@@ -842,6 +842,13 @@ export default function BattleTab() {
             {hasRedDot && <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-sm border border-white/50"></div>}
           </button>
           <button 
+            onClick={() => setActiveTab('talisman')}
+            className="flex-1 bg-primary/80 backdrop-blur-md border border-white/10 rounded-sm py-3 flex items-center justify-center gap-2 active:bg-white/5 transition-colors shadow-sm"
+          >
+            <Sparkles size={18} className="text-ink" />
+            <span className="font-serif font-bold text-ink tracking-widest text-sm">阵符</span>
+          </button>
+          <button 
             onClick={() => setActiveTab('lineup')}
             className="flex-1 bg-primary/80 backdrop-blur-md border border-white/10 rounded-sm py-3 flex items-center justify-center gap-2 active:bg-white/5 transition-colors shadow-sm"
           >
