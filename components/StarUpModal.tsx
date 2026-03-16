@@ -82,7 +82,7 @@ export default function StarUpModal({ hero, onClose, onSuccess }: StarUpModalPro
               <div className="flex flex-col items-center gap-2 flex-1">
                 <span className="text-xs text-ink-light font-bold">升阶前</span>
                 <div className="flex items-center gap-1 text-ink font-mono text-sm">
-                  <span className="text-yellow-500">{starLevel}星</span>
+                  <span className="text-yellow-500">{starLevel - 1}星</span>
                 </div>
                 <div className="flex flex-col items-center text-xs text-ink-light gap-1">
                   <span>武力: {heroState?.attack ? heroState.attack - 10 : hero.attack}</span>
@@ -96,7 +96,7 @@ export default function StarUpModal({ hero, onClose, onSuccess }: StarUpModalPro
               <div className="flex flex-col items-center gap-2 flex-1">
                 <span className="text-xs text-accent font-bold">升阶后</span>
                 <div className="flex items-center gap-1 text-accent font-mono text-sm font-bold">
-                  <span className="text-yellow-500">{starLevel + 1}星</span>
+                  <span className="text-yellow-500">{starLevel}星</span>
                 </div>
                 <div className="flex flex-col items-center text-xs text-accent font-bold gap-1">
                   <span>武力: {heroState?.attack || hero.attack + 10}</span>

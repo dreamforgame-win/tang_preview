@@ -6,6 +6,13 @@ export interface Buff {
   sourceId?: string;
 }
 
+export interface CombatStats {
+  damageDealt: number;
+  damageTaken: number;
+  healingDone: number;
+  skillsCast: number;
+}
+
 export interface CombatHero {
   id: string;
   instanceId: string;
@@ -29,6 +36,9 @@ export interface CombatHero {
   
   // Passive states
   has_revived?: boolean;
+  
+  // Battle stats
+  stats: CombatStats;
 }
 
 export interface BattleEvent {
@@ -59,7 +69,13 @@ export class BattleEngine {
     this.heroes = [...playerLineup, ...enemyLineup].map(h => ({
       ...h,
       shield: 0,
-      buffs: []
+      buffs: [],
+      stats: {
+        damageDealt: 0,
+        damageTaken: 0,
+        healingDone: 0,
+        skillsCast: 0
+      }
     }));
     
     // Trigger battle start passives
@@ -218,6 +234,9 @@ export class BattleEngine {
     
     if (actualDamage > 0) {
       target.hp -= actualDamage;
+      target.stats.damageTaken += actualDamage;
+      attacker.stats.damageDealt += actualDamage;
+      
       this.emitEvent({ type: 'damage', targetId: target.instanceId, value: actualDamage, isMagic });
       this.log(`${attacker.name} 攻击了 ${target.name}，造成了 ${actualDamage} 点${isMagic ? '谋略' : '物理'}伤害`, 'attack');
       
@@ -230,7 +249,7 @@ export class BattleEngine {
       
       // Chengyaojin passive
       if (target.id === 'chengyaojin' && Math.random() < 0.1) {
-        this.heal(target, target.max_hp * 0.08);
+        this.heal(target, target.max_hp * 0.08, target);
       }
       
       if (target.hp <= 0) {
@@ -249,9 +268,14 @@ export class BattleEngine {
     }
   }
   
-  heal(target: CombatHero, amount: number) {
+  heal(target: CombatHero, amount: number, healer?: CombatHero) {
     const actualHeal = Math.floor(amount);
     target.hp = Math.min(target.max_hp, target.hp + actualHeal);
+    if (healer) {
+      healer.stats.healingDone += actualHeal;
+    } else {
+      target.stats.healingDone += actualHeal;
+    }
     this.emitEvent({ type: 'heal', targetId: target.instanceId, value: actualHeal });
   }
   
@@ -260,6 +284,7 @@ export class BattleEngine {
     const allies = livingHeroes.filter(h => h.team === caster.team && h.hp > 0);
     
     this.emitEvent({ type: 'skill', sourceId: caster.instanceId });
+    caster.stats.skillsCast += 1;
     
     // Lishimin passive
     const lishimin = allies.find(h => h.id === 'lishimin');
@@ -337,7 +362,7 @@ export class BattleEngine {
             if (target.hp <= 0) killed = true;
           }
         }
-        if (killed) this.heal(caster, caster.max_hp * 0.3);
+        if (killed) this.heal(caster, caster.max_hp * 0.3, caster);
       }
     } else if (caster.id === 'weizheng') {
       this.emitEvent({ type: 'shout', sourceId: caster.instanceId, text: '梦斩泾河龙！' });
@@ -359,7 +384,7 @@ export class BattleEngine {
     } else if (caster.id === 'fangxuanling') {
       this.emitEvent({ type: 'shout', sourceId: caster.instanceId, text: '运筹帷幄！' });
       for (const ally of allies) {
-        this.heal(ally, caster.int_stat * 2.5);
+        this.heal(ally, caster.int_stat * 2.5, caster);
         ally.buffs = []; // Dispel
         this.emitEvent({ type: 'buff', targetId: ally.instanceId, text: '净化' });
       }

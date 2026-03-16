@@ -1,7 +1,7 @@
 'use client';
 import { X, Shield, Sword, Zap, Heart, Wind, Star } from 'lucide-react';
 import { HeroDetail } from '@/data/heroes';
-import { useGameState } from './GameStateProvider';
+import { useGameState, getRequiredExp } from './GameStateProvider';
 import { useState } from 'react';
 import StarUpModal from './StarUpModal';
 
@@ -59,8 +59,26 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
                 <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
               ))}
             </div>
-            <h2 className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-md">{hero.name}</h2>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2">
+              <h2 className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-md">{hero.name}</h2>
+              {heroState?.level && (
+                <span className="text-lg font-bold text-yellow-400 drop-shadow-md self-end pb-1">Lv.{heroState.level}</span>
+              )}
+            </div>
+            {heroState?.level && (
+              <div className="w-full mt-1 relative">
+                <div className="w-full h-3 bg-black/50 rounded-full overflow-hidden border border-white/20">
+                  <div 
+                    className="h-full bg-blue-500" 
+                    style={{ width: `${Math.min(100, (heroState.exp / getRequiredExp(heroState.level)) * 100)}%` }}
+                  ></div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white drop-shadow-md pointer-events-none">
+                  {Math.floor(heroState.exp)} / {getRequiredExp(heroState.level)}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getQualityColor(hero.quality)}`}>{hero.quality}</span>
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${getTypeColor(hero.type)}`}>{hero.type}</span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-bg-dark/60 text-white border border-white/30 backdrop-blur-sm">{hero.role}</span>
@@ -74,8 +92,8 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
               <Shield size={100} />
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
-              <div className="flex items-center gap-1 text-ink-light"><Heart size={12} /> <span className="text-[10px] font-bold">生命</span></div>
-              <span className="font-mono font-bold text-ink text-sm">{hero.hp}</span>
+              <div className="flex items-center gap-1 text-ink-light"><Heart size={12} /> <span className="text-[10px] font-bold">兵力</span></div>
+              <span className="font-mono font-bold text-ink text-sm">{heroState?.maxTroops || hero.hp}</span>
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
               <div className="flex items-center gap-1 text-ink-light"><Sword size={12} /> <span className="text-[10px] font-bold">攻击</span></div>
@@ -91,7 +109,7 @@ export default function HeroDetailModal({ hero, onClose }: HeroDetailModalProps)
             </div>
             <div className="flex flex-col items-center gap-1 relative z-10">
               <div className="flex items-center gap-1 text-ink-light"><Wind size={12} /> <span className="text-[10px] font-bold">攻速</span></div>
-              <span className="font-mono font-bold text-ink text-sm">{hero.speed}</span>
+              <span className="font-mono font-bold text-ink text-sm">{heroState?.speed || hero.speed}</span>
             </div>
           </div>
           

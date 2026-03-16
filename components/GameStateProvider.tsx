@@ -1,6 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState } from 'react';
 import { HERO_GALLERY } from '@/data/heroes';
+import { HERO_GROWTH } from '@/data/heroGrowth';
+import { TileData, generateMap } from '@/components/tabs/BattleTab';
 
 type Hero = {
   id: string;
@@ -14,7 +16,10 @@ type Hero = {
   attack: number;
   magic: number;
   defense: number;
+  speed: number;
   isNew?: boolean;
+  level: number;
+  exp: number;
 };
 
 export type TabType = 'summon' | 'gallery' | 'talisman' | 'lineup' | 'battle';
@@ -64,6 +69,41 @@ type GameState = {
   removeMarch: (id: string) => void;
   hasRedDot: boolean;
   resetGame: () => void;
+  avatarId: string;
+  setAvatarId: (id: string) => void;
+  addHeroExp: (heroIds: string[], exp: number) => void;
+  mapData: TileData[];
+  setMapData: React.Dispatch<React.SetStateAction<TileData[]>>;
+};
+
+export const getRequiredExp = (level: number) => {
+  return Math.floor(100 * Math.pow(level, 1.5) * Math.pow(1.08, level));
+};
+
+export const calculateHeroStats = (heroId: string, level: number, starLevel: number) => {
+  const baseHero = HERO_GALLERY.find(h => h.id === heroId);
+  const growth = HERO_GROWTH[baseHero?.name || ''];
+  
+  if (!baseHero || !growth) {
+    return {
+      maxTroops: 10000,
+      attack: baseHero?.attack || 100,
+      magic: baseHero?.magic || 100,
+      defense: baseHero?.defense || 100,
+      speed: baseHero?.speed || 100
+    };
+  }
+
+  const levelBonus = level - 1;
+  const starBonus = starLevel * 10;
+
+  return {
+    maxTroops: Math.floor(10000 + growth.hp * levelBonus),
+    attack: Math.floor(baseHero.attack + growth.attack * levelBonus + starBonus),
+    magic: Math.floor(baseHero.magic + growth.magic * levelBonus + starBonus),
+    defense: Math.floor(baseHero.defense + growth.defense * levelBonus + starBonus),
+    speed: Math.floor(baseHero.speed + growth.speed * levelBonus)
+  };
 };
 
 const GameStateContext = createContext<GameState | null>(null);
@@ -73,21 +113,29 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabType>('battle');
   const [coins, setCoins] = useState(12450);
   const [tokens, setTokens] = useState(15);
+  const [avatarId, setAvatarId] = useState('libai');
+  const [mapData, setMapData] = useState<TileData[]>(generateMap);
   const [pityCounter, setPityCounter] = useState(0);
-  const [heroes, setHeroes] = useState<Hero[]>(HERO_GALLERY.map(h => ({
-    id: h.id,
-    name: h.name,
-    avatar: h.avatar,
-    troops: 10000,
-    maxTroops: 10000,
-    starLevel: 0,
-    shards: 0,
-    locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id),
-    attack: h.attack,
-    magic: h.magic,
-    defense: h.defense,
-    isNew: false
-  })));
+  const [heroes, setHeroes] = useState<Hero[]>(HERO_GALLERY.map(h => {
+    const stats = calculateHeroStats(h.id, 1, 0);
+    return {
+      id: h.id,
+      name: h.name,
+      avatar: h.avatar,
+      troops: stats.maxTroops,
+      maxTroops: stats.maxTroops,
+      starLevel: 0,
+      shards: 0,
+      locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id),
+      attack: stats.attack,
+      magic: stats.magic,
+      defense: stats.defense,
+      speed: stats.speed,
+      isNew: false,
+      level: 1,
+      exp: 0
+    };
+  }));
   
   const [lineups, setLineups] = useState<(string | null)[][]>(
     Array.from({ length: 5 }, () => Array(9).fill(null))
@@ -124,20 +172,40 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
           // Merge saved heroes with gallery to ensure new heroes are added
           setHeroes(HERO_GALLERY.map(h => {
             const savedHero = data.heroes.find((sh: Hero) => sh.id === h.id);
-            return savedHero ? { ...savedHero, name: h.name, avatar: h.avatar } : {
-              id: h.id,
-              name: h.name,
-              avatar: h.avatar,
-              troops: 10000,
-              maxTroops: 10000,
-              starLevel: 0,
-              shards: 0,
-              locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id),
-              attack: h.attack,
-              magic: h.magic,
-              defense: h.defense,
-              isNew: false
-            };
+            if (savedHero) {
+              const stats = calculateHeroStats(h.id, savedHero.level || 1, savedHero.starLevel || 0);
+              return { 
+                ...savedHero, 
+                name: h.name, 
+                avatar: h.avatar,
+                maxTroops: stats.maxTroops,
+                attack: stats.attack,
+                magic: stats.magic,
+                defense: stats.defense,
+                speed: stats.speed,
+                level: savedHero.level || 1,
+                exp: savedHero.exp || 0
+              };
+            } else {
+              const stats = calculateHeroStats(h.id, 1, 0);
+              return {
+                id: h.id,
+                name: h.name,
+                avatar: h.avatar,
+                troops: stats.maxTroops,
+                maxTroops: stats.maxTroops,
+                starLevel: 0,
+                shards: 0,
+                locked: ['libai', 'xuerengui', 'wuzetian', 'luocheng', 'wangbo', 'direnjie'].includes(h.id),
+                attack: stats.attack,
+                magic: stats.magic,
+                defense: stats.defense,
+                speed: stats.speed,
+                isNew: false,
+                level: 1,
+                exp: 0
+              };
+            }
           }));
         }
         if (data.lineups) setLineups(data.lineups);
@@ -147,6 +215,8 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         if (data.coins !== undefined) setCoins(data.coins);
         if (data.tokens !== undefined) setTokens(data.tokens);
         if (data.pityCounter !== undefined) setPityCounter(data.pityCounter);
+        if (data.avatarId !== undefined) setAvatarId(data.avatarId);
+        if (data.mapData !== undefined) setMapData(data.mapData);
       } catch (e) {
         console.error('Failed to load save', e);
       }
@@ -165,10 +235,12 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         formationId,
         coins,
         tokens,
-        pityCounter
+        pityCounter,
+        avatarId,
+        mapData
       }));
     }
-  }, [heroes, lineups, lineupTalismans, talismans, formationId, coins, tokens, pityCounter, isLoaded]);
+  }, [heroes, lineups, lineupTalismans, talismans, formationId, coins, tokens, pityCounter, avatarId, mapData, isLoaded]);
 
   const hasRedDot = React.useMemo(() => {
     return heroes.some(h => !h.locked && (h.isNew || (h.starLevel < 5 && h.shards >= (h.starLevel < 3 ? 1 : 2))));
@@ -239,13 +311,17 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       if (h.id === heroId && h.starLevel < 5) {
         const cost = h.starLevel < 3 ? 1 : 2;
         if (h.shards >= cost) {
+          const newStarLevel = h.starLevel + 1;
+          const stats = calculateHeroStats(h.id, h.level, newStarLevel);
           return { 
             ...h, 
-            starLevel: h.starLevel + 1, 
+            starLevel: newStarLevel, 
             shards: h.shards - cost,
-            attack: h.attack + 10,
-            magic: h.magic + 10,
-            defense: h.defense + 10
+            maxTroops: stats.maxTroops,
+            attack: stats.attack,
+            magic: stats.magic,
+            defense: stats.defense,
+            speed: stats.speed
           };
         }
       }
@@ -257,6 +333,42 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     setHeroes(prev => prev.map(h => {
       if (h.id === heroId && h.isNew) {
         return { ...h, isNew: false };
+      }
+      return h;
+    }));
+  };
+
+  const addHeroExp = (heroIds: string[], expAmount: number) => {
+    if (heroIds.length === 0 || expAmount <= 0) return;
+    const expPerHero = Math.floor(expAmount / heroIds.length);
+    
+    setHeroes(prev => prev.map(h => {
+      if (heroIds.includes(h.id)) {
+        let newExp = h.exp + expPerHero;
+        let newLevel = h.level || 1;
+        let leveledUp = false;
+        
+        while (newExp >= getRequiredExp(newLevel) && newLevel < 50) { // Assuming max level is 50
+          newExp -= getRequiredExp(newLevel);
+          newLevel++;
+          leveledUp = true;
+        }
+        
+        if (leveledUp) {
+          const stats = calculateHeroStats(h.id, newLevel, h.starLevel);
+          return { 
+            ...h, 
+            exp: newExp, 
+            level: newLevel,
+            maxTroops: stats.maxTroops,
+            attack: stats.attack,
+            magic: stats.magic,
+            defense: stats.defense,
+            speed: stats.speed
+          };
+        }
+        
+        return { ...h, exp: newExp, level: newLevel };
       }
       return h;
     }));
@@ -279,7 +391,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       talismans, lineupTalismans, currentLineupTalismans, setFullLineupTalismans,
       lineupSubTab, setLineupSubTab,
       setCoins, setTokens, updateHeroTroops, quickAssign, setLineupSlot, setFullLineup, addHeroToRoster, ascendHero, markHeroAsSeen, pityCounter,
-      marches, addMarch, removeMarch, hasRedDot, resetGame
+      marches, addMarch, removeMarch, hasRedDot, resetGame,
+      avatarId, setAvatarId, addHeroExp,
+      mapData, setMapData
     }}>
       {children}
     </GameStateContext.Provider>

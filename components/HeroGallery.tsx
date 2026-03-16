@@ -57,6 +57,11 @@ export default function HeroGallery() {
             >
               <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
                    style={{ backgroundImage: `url(${hero.avatar})` }}>
+                {heroState?.level && !heroState?.locked && (
+                  <div className="absolute top-0 left-0 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-md z-30">
+                    Lv.{heroState.level}
+                  </div>
+                )}
                 {isNew && (
                   <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-bl-md z-30 shadow-md">
                     新

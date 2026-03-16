@@ -15,6 +15,7 @@ type Hero = {
   avatar: string;
   troops: number;
   maxTroops: number;
+  level?: number;
 };
 
 const HeroRow = ({ hero, updateHeroTroops }: { hero: Hero, updateHeroTroops: (id: string, troops: number) => void }) => {
@@ -42,7 +43,10 @@ const HeroRow = ({ hero, updateHeroTroops }: { hero: Hero, updateHeroTroops: (id
       ></div>
       <div className="flex-1 flex flex-col justify-center">
         <div className="flex justify-between items-end mb-1">
-          <span className="font-serif font-bold text-ink text-sm leading-none">{hero.name}</span>
+          <div className="flex items-center gap-1">
+            <span className="font-serif font-bold text-ink text-sm leading-none">{hero.name}</span>
+            {hero.level && <span className="text-[10px] font-bold text-accent leading-none">Lv.{hero.level}</span>}
+          </div>
           <span className="text-[10px] text-ink-light italic font-mono leading-none">
             {localTroops.toLocaleString()} / {hero.maxTroops.toLocaleString()}
           </span>
