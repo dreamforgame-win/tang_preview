@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import { CombatHero, BattleEngine, BattleLog, BattleEvent } from '@/lib/battleEngine';
 import { X, FastForward, Play, Pause, MessageSquareText } from 'lucide-react';
 
@@ -119,7 +120,7 @@ export default function BattleScreen({ playerLineup, enemyLineup, onClose, onVic
     });
 
     return (
-      <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
+      <div className="grid grid-cols-3 gap-1.5 w-full max-w-[272px]">
         {grid.map((hero, idx) => {
           const isAttacking = hero && attackingHeroes[hero.instanceId] && Date.now() - attackingHeroes[hero.instanceId] < 200;
           const heroEffects = hero ? effects.filter(e => e.targetId === hero.instanceId) : [];
@@ -128,11 +129,15 @@ export default function BattleScreen({ playerLineup, enemyLineup, onClose, onVic
           <div key={idx} className="aspect-square bg-black/20 rounded-md border border-white/10 relative flex items-center justify-center">
             {hero && hero.hp > 0 && (
               <div className={`absolute inset-0 flex flex-col items-center justify-center p-1 transition-transform duration-100 ${isAttacking ? (team === 'player' ? '-translate-y-2' : 'translate-y-2') : ''}`}>
-                <img 
-                  src={hero.avatar} 
-                  alt={hero.name} 
-                  className={`w-16 h-16 object-cover rounded-sm border ${team === 'player' ? 'border-blue-400' : 'border-red-400'}`}
-                />
+                <div className={`relative w-14 h-14 rounded-sm overflow-hidden border ${team === 'player' ? 'border-blue-400' : 'border-red-400'}`}>
+                  <Image 
+                    src={hero.avatar} 
+                    alt={hero.name} 
+                    fill
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
                 
                 {/* Visual Effects Overlay */}
                 <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-50">
@@ -185,11 +190,15 @@ export default function BattleScreen({ playerLineup, enemyLineup, onClose, onVic
             )}
             {hero && hero.hp <= 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <img 
-                  src={hero.avatar} 
-                  alt={hero.name} 
-                  className="w-16 h-16 object-cover rounded-sm grayscale opacity-50"
-                />
+                <div className="relative w-14 h-14 rounded-sm overflow-hidden grayscale opacity-50">
+                  <Image 
+                    src={hero.avatar} 
+                    alt={hero.name} 
+                    fill
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <X className="text-red-500 w-10 h-10 opacity-80" />
                 </div>
@@ -254,7 +263,7 @@ export default function BattleScreen({ playerLineup, enemyLineup, onClose, onVic
           
           {/* Winner Overlay */}
           {winner && (
-            <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 animate-in zoom-in duration-300 p-4 overflow-y-auto">
+            <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-[300] animate-in zoom-in duration-300 p-4 overflow-y-auto">
               <h1 className={`text-5xl font-serif font-bold mb-6 drop-shadow-lg ${winner === 'player' ? 'text-yellow-400' : 'text-gray-400'}`}>
                 {winner === 'player' ? '战斗胜利' : '战斗失败'}
               </h1>
@@ -269,7 +278,9 @@ export default function BattleScreen({ playerLineup, enemyLineup, onClose, onVic
                     <div className="space-y-2">
                       {heroes.filter(h => h.team === 'player').map(h => (
                         <div key={h.instanceId} className="flex items-center gap-2 bg-black/30 p-2 rounded-sm border border-white/5">
-                          <img src={h.avatar} alt={h.name} className="w-10 h-10 object-cover rounded-sm border border-blue-400/50" />
+                          <div className="relative w-10 h-10 rounded-sm overflow-hidden border border-blue-400/50">
+                            <Image src={h.avatar} alt={h.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                          </div>
                           <div className="flex-1 text-[10px] font-mono text-white/80 grid grid-cols-2 gap-x-2 gap-y-1">
                             <div className="col-span-2 font-bold text-white text-xs mb-0.5">{h.name}</div>
                             <div>输出: <span className="text-red-400">{Math.floor(h.stats.damageDealt)}</span></div>
@@ -288,7 +299,9 @@ export default function BattleScreen({ playerLineup, enemyLineup, onClose, onVic
                     <div className="space-y-2">
                       {heroes.filter(h => h.team === 'enemy').map(h => (
                         <div key={h.instanceId} className="flex items-center gap-2 bg-black/30 p-2 rounded-sm border border-white/5">
-                          <img src={h.avatar} alt={h.name} className="w-10 h-10 object-cover rounded-sm border border-red-400/50" />
+                          <div className="relative w-10 h-10 rounded-sm overflow-hidden border border-red-400/50">
+                            <Image src={h.avatar} alt={h.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                          </div>
                           <div className="flex-1 text-[10px] font-mono text-white/80 grid grid-cols-2 gap-x-2 gap-y-1">
                             <div className="col-span-2 font-bold text-white text-xs mb-0.5">{h.name}</div>
                             <div>输出: <span className="text-red-400">{Math.floor(h.stats.damageDealt)}</span></div>

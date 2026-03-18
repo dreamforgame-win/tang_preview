@@ -8,6 +8,8 @@ import { HERO_GALLERY, HeroQuality, HeroType, HeroRole, HeroDetail } from '@/dat
 import { formations } from '@/data/formations';
 import { TALISMANS, Talisman } from '@/data/talismans';
 import { useDragScroll } from '@/hooks/useDragScroll';
+import Image from 'next/image';
+import { getHeroFrame } from '@/lib/utils';
 
 type Hero = {
   id: string;
@@ -1187,8 +1189,10 @@ export default function LineupTab() {
                         setSelectedHeroInfo(hero);
                       }}
                     >
-                      <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
-                           style={{ backgroundImage: `url(${hero.avatar})` }}>
+                      <div className="w-[80px] h-[120px] rounded-sm overflow-hidden bg-bg-dark shadow-sm group-active:scale-95 transition-transform relative">
+                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${hero.avatar})` }} />
+                        <Image src={getHeroFrame(hero.quality)} fill className="object-fill pointer-events-none z-10" alt="frame" referrerPolicy="no-referrer" />
+                        
                         {heroState?.locked && (
                           <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
                             <div className="text-white">
@@ -1196,7 +1200,7 @@ export default function LineupTab() {
                             </div>
                           </div>
                         )}
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4 z-20">
                           {heroState && heroState.starLevel > 0 && (
                             <div className="flex justify-center mb-0.5">
                               {[1, 2, 3, 4, 5].slice(0, heroState.starLevel).map(i => (
@@ -1211,7 +1215,7 @@ export default function LineupTab() {
                           </div>
                         </div>
                         {isPlaced && (
-                          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1 z-10">
+                          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1 z-30">
                             {heroLineups.map(lIdx => (
                               <span key={lIdx} className="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-sm border border-white/20 shadow-sm">
                                 阵容{lineupNames[lIdx]}

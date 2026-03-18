@@ -4,6 +4,7 @@ import { HERO_GALLERY, HeroDetail } from '@/data/heroes';
 import HeroDetailModal from './HeroDetailModal';
 import { useGameState } from './GameStateProvider';
 import { Star } from 'lucide-react';
+import { getHeroFrame } from '@/lib/utils';
 
 export default function HeroGallery() {
   const [selectedHero, setSelectedHero] = useState<HeroDetail | null>(null);
@@ -17,16 +18,6 @@ export default function HeroGallery() {
       case '盾兵': return 'text-slate-700 bg-slate-200 border-slate-300';
       case '枪兵': return 'text-red-700 bg-red-100 border-red-200';
       default: return 'text-gray-700 bg-gray-100 border-gray-200';
-    }
-  };
-
-  const getQualityColor = (quality: string) => {
-    switch(quality) {
-      case '神将': return 'text-red-600 border-red-600 bg-red-50';
-      case '名将': return 'text-orange-500 border-orange-500 bg-orange-50';
-      case '良将': return 'text-purple-600 border-purple-600 bg-purple-50';
-      case '裨将': return 'text-blue-500 border-blue-500 bg-blue-50';
-      default: return 'text-gray-500 border-gray-500 bg-gray-50';
     }
   };
 
@@ -55,8 +46,10 @@ export default function HeroGallery() {
               }}
               className="flex flex-col items-center cursor-pointer group relative"
             >
-              <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm group-active:scale-95 transition-transform relative`}
-                   style={{ backgroundImage: `url(${hero.avatar})` }}>
+              <div className="w-[80px] h-[120px] rounded-sm overflow-hidden bg-bg-dark shadow-sm group-active:scale-95 transition-transform relative">
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${hero.avatar})` }} />
+                <img src={getHeroFrame(hero.quality)} className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10" alt="frame" />
+                
                 {heroState?.level && !heroState?.locked && (
                   <div className="absolute top-0 left-0 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-md z-30">
                     Lv.{heroState.level}
@@ -77,7 +70,7 @@ export default function HeroGallery() {
                     </div>
                   </div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4 z-20">
                   {starLevel > 0 && (
                     <div className="flex justify-center mb-0.5">
                       {[1, 2, 3, 4, 5].slice(0, starLevel).map(i => (

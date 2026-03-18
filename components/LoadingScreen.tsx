@@ -1,19 +1,25 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function LoadingScreen({ onComplete }: { onComplete: () => void }) {
-  const [hasStarted, setHasStarted] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [progress, setProgress] = useState(0);
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    if (!hasStarted) return;
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
+  useEffect(() => {
     // Preload images
     const imagesToPreload = [
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/card_bg.jpg',
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/summon_bg.jpg',
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/team_bg.jpg',
       'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/bg/loading_bg.jpg',
+      'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/UI/tex_frm_lan.png',
+      'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/UI/tex_frm_zi.png',
+      'https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/UI/tex_frm_cheng.png',
     ];
 
     imagesToPreload.forEach(src => {
@@ -40,12 +46,12 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
       if (currentStep >= steps) {
         clearInterval(timer);
-        onComplete();
+        setIsLoaded(true);
       }
     }, interval);
 
     return () => clearInterval(timer);
-  }, [hasStarted, onComplete]);
+  }, []);
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0f1a] text-white overflow-hidden">
@@ -62,19 +68,7 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
         </div>
         
         <div className="w-4/5 max-w-sm flex flex-col items-center mt-auto mb-10 h-24 justify-end">
-          {!hasStarted ? (
-            <button 
-              onClick={() => setHasStarted(true)}
-              className="transition-all active:scale-95"
-            >
-              <img 
-                src="https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/UI/btn_login.png" 
-                alt="开始游戏" 
-                className="h-11 w-auto"
-                referrerPolicy="no-referrer"
-              />
-            </button>
-          ) : (
+          {!isLoaded ? (
             <>
               <span className="text-sm text-blue-100/80 mb-3 font-serif tracking-widest drop-shadow-md">正在加载资源</span>
               
@@ -87,7 +81,22 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
               
               <span className="text-xs font-mono mt-3 text-blue-400/90 font-bold tracking-wider">{progress}%</span>
             </>
+          ) : (
+            <button 
+              onClick={() => onCompleteRef.current()}
+              className="transition-all active:scale-95 animate-pulse"
+            >
+              <img 
+                src="https://cdn.jsdelivr.net/gh/dreamforgame-win/slg-assets@main/UI/btn_login.png" 
+                alt="开始游戏" 
+                className="h-11 w-auto"
+                referrerPolicy="no-referrer"
+              />
+            </button>
           )}
+          <div className="mt-6 text-[10px] text-white/50 font-sans tracking-wider text-center">
+            ©️刘桥滨 2026
+          </div>
         </div>
       </div>
     </div>

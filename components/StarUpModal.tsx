@@ -2,6 +2,7 @@
 import { X, Star, ArrowRight } from 'lucide-react';
 import { HeroDetail } from '@/data/heroes';
 import { useGameState } from './GameStateProvider';
+import { getHeroFrame } from '@/lib/utils';
 import { useState } from 'react';
 
 interface StarUpModalProps {
@@ -43,16 +44,6 @@ export default function StarUpModal({ hero, onClose, onSuccess }: StarUpModalPro
     }
   };
 
-  const getQualityColor = (quality: string) => {
-    switch(quality) {
-      case '神将': return 'text-red-600 border-red-600 bg-red-50';
-      case '名将': return 'text-orange-500 border-orange-500 bg-orange-50';
-      case '良将': return 'text-purple-600 border-purple-600 bg-purple-50';
-      case '裨将': return 'text-blue-500 border-blue-500 bg-blue-50';
-      default: return 'text-gray-500 border-gray-500 bg-gray-50';
-    }
-  };
-
   if (isSuccess) {
     return (
       <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={handleClose}>
@@ -63,9 +54,10 @@ export default function StarUpModal({ hero, onClose, onSuccess }: StarUpModalPro
           </div>
           
           <div className="p-6 flex flex-col items-center">
-            <div className={`w-[100px] h-[150px] rounded-sm border-2 ${getQualityColor(hero.quality).split(' ')[1]} overflow-hidden bg-bg-dark bg-cover bg-center shadow-lg relative mb-6`}
-                 style={{ backgroundImage: `url(${hero.avatar})` }}>
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+            <div className="w-[100px] h-[150px] rounded-sm overflow-hidden bg-bg-dark shadow-lg relative mb-6">
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${hero.avatar})` }} />
+              <img src={getHeroFrame(hero.quality)} className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10" alt="frame" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4 z-20">
                 <div className="flex justify-center mb-0.5">
                   {[1, 2, 3, 4, 5].slice(0, starLevel + 1).map(i => (
                     <Star key={i} size={10} className="text-yellow-400 fill-yellow-400" />

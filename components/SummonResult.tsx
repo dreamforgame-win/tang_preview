@@ -3,6 +3,7 @@ import { HeroDetail } from '@/data/heroes';
 import HeroDetailModal from './HeroDetailModal';
 import { useGameState } from './GameStateProvider';
 import { Star } from 'lucide-react';
+import { getHeroFrame } from '@/lib/utils';
 
 interface SummonResultProps {
   results: { hero: HeroDetail, status: 'new' | 'converted' }[];
@@ -18,16 +19,6 @@ export default function SummonResult({ results, onClose }: SummonResultProps) {
     const timer = setTimeout(() => setCanClose(true), 500);
     return () => clearTimeout(timer);
   }, []);
-
-  const getQualityColor = (quality: string) => {
-    switch(quality) {
-      case '神将': return 'border-red-600';
-      case '名将': return 'border-orange-500';
-      case '良将': return 'border-purple-600';
-      case '裨将': return 'border-blue-500';
-      default: return 'border-gray-500';
-    }
-  };
 
   return (
     <div 
@@ -49,12 +40,13 @@ export default function SummonResult({ results, onClose }: SummonResultProps) {
             const starLevel = heroState?.starLevel || 0;
             return (
               <div key={i} className="flex flex-col items-center gap-1">
-                <div className={`w-[80px] h-[120px] rounded-sm border-2 ${getQualityColor(item.hero.quality)} overflow-hidden bg-bg-dark bg-cover bg-center shadow-sm relative cursor-pointer`} onClick={() => setSelectedHero(item.hero)}>
+                <div className="w-[80px] h-[120px] rounded-sm overflow-hidden bg-bg-dark shadow-sm relative cursor-pointer" onClick={() => setSelectedHero(item.hero)}>
                   <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.hero.avatar})` }}></div>
+                  <img src={getHeroFrame(item.hero.quality)} className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10" alt="frame" />
                   {item.status === 'new' && (
                     <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-bold px-1 rounded-bl-sm z-30">新</div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4">
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1 pt-4 z-20">
                     {starLevel > 0 && (
                       <div className="flex justify-center mb-0.5">
                         {[1, 2, 3, 4, 5].slice(0, starLevel).map(i => (

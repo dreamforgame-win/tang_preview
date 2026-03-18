@@ -299,7 +299,7 @@ const MarchPawn = ({
       ref={ref}
       className={`absolute z-[60] ${isSelected ? 'brightness-125' : ''}`}
       style={{ 
-        transform: `translate(-50%, -80%) rotateX(${-rotateX}deg)`,
+        transform: `translate(-50%, -80%) translateZ(40px) rotateX(${-rotateX}deg)`,
         transformStyle: 'preserve-3d'
       }}
       onClick={(e) => {
@@ -366,7 +366,7 @@ export default function BattleTab() {
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isAvatarSelectOpen, setIsAvatarSelectOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   
   useEffect(() => {
     const updateTime = () => {
@@ -390,11 +390,18 @@ export default function BattleTab() {
   // Battle State
   const [activeBattle, setActiveBattle] = useState<{ player: CombatHero[], enemy: CombatHero[], tileCol: number, tileRow: number } | null>(null);
   const marchScrollRef = useDragScroll<HTMLDivElement>({ direction: 'horizontal' });
+  const [currentTimestamp, setCurrentTimestamp] = useState(Date.now());
 
   // Abandon timer loop
   useEffect(() => {
+    const hasAbandoningTiles = mapData.some(t => t.abandonEndTime);
+    
     const timer = setInterval(() => {
       const now = Date.now();
+      if (hasAbandoningTiles) {
+        setCurrentTimestamp(now);
+      }
+      
       let changed = false;
       setMapData(prev => {
         const next = prev.map(t => {
@@ -408,7 +415,7 @@ export default function BattleTab() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [setMapData]);
+  }, [mapData, setMapData]);
 
   // Territory and Road logic
   const territoryLimit = 40;
@@ -530,7 +537,7 @@ export default function BattleTab() {
     if (!containerRef.current) return;
     const mapWidth = MAP_WIDTH * HEX_WIDTH + HEX_WIDTH / 2;
     const mapHeight = MAP_HEIGHT * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 4;
-    const currentRotateX = ((zoom - 1.0) / 1.0) * 45;
+    const currentRotateX = Math.max(0, ((zoom - 0.8) / (1.5 - 0.8)) * 45);
     const rotateXRad = currentRotateX * Math.PI / 180;
     const W = mapWidth * zoom;
     const H = mapHeight * zoom * Math.cos(rotateXRad);
@@ -554,7 +561,7 @@ export default function BattleTab() {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom(z => Math.max(1.0, Math.min(2.0, z + zoomDelta)));
+      setZoom(z => Math.max(0.8, Math.min(1.5, z + zoomDelta)));
       setSelectedTile(null);
     };
 
@@ -586,7 +593,7 @@ export default function BattleTab() {
     if (containerRef.current) {
       const mapWidth = MAP_WIDTH * HEX_WIDTH + HEX_WIDTH / 2;
       const mapHeight = MAP_HEIGHT * HEX_HEIGHT * 0.75 + HEX_HEIGHT / 4;
-      const currentRotateX = ((zoom - 1.0) / 1.0) * 45;
+      const currentRotateX = Math.max(0, ((zoom - 0.8) / (1.5 - 0.8)) * 45);
       const rotateXRad = currentRotateX * Math.PI / 180;
       const W = mapWidth * zoom;
       const H = mapHeight * zoom * Math.cos(rotateXRad);
@@ -616,7 +623,7 @@ export default function BattleTab() {
       
       if (lastTouchDist.current !== null) {
         const delta = dist - lastTouchDist.current;
-        setZoom(z => Math.max(1.0, Math.min(2.0, z + delta * 0.01)));
+        setZoom(z => Math.max(0.8, Math.min(1.5, z + delta * 0.01)));
         setSelectedTile(null);
       }
       lastTouchDist.current = dist;
@@ -693,7 +700,7 @@ export default function BattleTab() {
   };
 
   // Calculate rotateX based on zoom
-  const rotateX = ((zoom - 1.0) / 1.0) * 45;
+  const rotateX = Math.max(0, ((zoom - 0.8) / (1.5 - 0.8)) * 45);
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden bg-[#c2b2a1] select-none">
@@ -770,8 +777,11 @@ export default function BattleTab() {
                 </svg>
 
                 <div 
-                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-                  style={{ transform: `rotateX(${-rotateX}deg)` }}
+                  className="absolute -inset-4 flex flex-col items-center justify-center pointer-events-none"
+                  style={{ 
+                    transform: `translateZ(20px) rotateX(${-rotateX}deg)`,
+                    transformStyle: 'flat'
+                  }}
                 >
                   {tile.type !== 'plains' && (
                     <>
@@ -784,6 +794,11 @@ export default function BattleTab() {
                         </span>
                       )}
                     </>
+                  )}
+                  {tile.abandonEndTime && (
+                    <span className="text-[10px] font-mono text-red-200 bg-red-900/80 px-1 rounded-sm mt-0.5 border border-red-500/50 shadow-lg">
+                      放弃: {Math.max(0, Math.ceil((tile.abandonEndTime - currentTimestamp) / 1000))}s
+                    </span>
                   )}
                 </div>
               </div>
@@ -873,6 +888,7 @@ export default function BattleTab() {
                           ? { ...t, abandonEndTime: Date.now() + 30000 } 
                           : t
                       ));
+                      setSelectedTile(null);
                     }}
                     disabled={!!selectedTile.abandonEndTime}
                     className="bg-red-900/80 text-white px-2 py-0.5 rounded-sm text-[10px] font-bold border border-red-500/50 hover:bg-red-800 disabled:opacity-50"
@@ -881,12 +897,6 @@ export default function BattleTab() {
                   </button>
                 )}
               </div>
-              
-              {selectedTile.abandonEndTime && (
-                <div className="absolute top-[70px] left-1/2 -translate-x-1/2 mt-1 bg-red-900/80 text-white px-2 py-0.5 rounded-sm text-[10px] font-bold whitespace-nowrap pointer-events-auto border border-red-500/50 shadow-lg">
-                  放弃倒计时: {Math.max(0, Math.ceil((selectedTile.abandonEndTime - now) / 1000))}s
-                </div>
-              )}
 
               {selectedTile.type !== 'mountain' && selectedTile.type !== 'lake' && selectedTile.type !== 'city' && (
                 <div className="absolute left-[40px] top-1/2 -translate-y-1/2 ml-3 flex flex-col gap-2 pointer-events-auto">
@@ -1030,16 +1040,16 @@ export default function BattleTab() {
           <div className="flex flex-col gap-3 items-center">
             <div className="pointer-events-auto flex flex-col bg-primary/90 rounded-full border border-white/10 shadow-[0_4px_15px_rgba(0,0,0,0.4)] overflow-hidden">
               <button 
-                onClick={() => setZoom(z => Math.max(1.0, z - 0.2))}
-                disabled={zoom <= 1.0}
+                onClick={() => setZoom(z => Math.max(0.8, Math.min(1.5, z - 0.2)))}
+                disabled={zoom <= 0.8}
                 className="w-10 h-10 flex items-center justify-center text-ink hover:bg-white/10 active:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <Minus size={18} />
               </button>
               <div className="w-full h-[1px] bg-ink/10"></div>
               <button 
-                onClick={() => setZoom(z => Math.min(2.0, z + 0.2))}
-                disabled={zoom >= 2.0}
+                onClick={() => setZoom(z => Math.max(0.8, Math.min(1.5, z + 0.2)))}
+                disabled={zoom >= 1.5}
                 className="w-10 h-10 flex items-center justify-center text-ink hover:bg-white/10 active:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <Plus size={18} />
